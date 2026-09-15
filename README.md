@@ -62,8 +62,9 @@ evermodel_ops/
 │   ├── build/                  构建产物 = nginx 站点根（不入库）
 │   └── dist/                   前端发布包产出（不入库）
 ├── deploy/                     部署脚手架
-│   ├── supervisor/             后端 5 进程托管（supervisor + systemd）+ 启停命令文档
-│   └── nginx/                  容器内 nginx 站点配置
+│   ├── supervisor/             生产形态：后端 5 进程托管（supervisor + systemd）+ 启停命令文档
+│   ├── nginx/                  容器内 nginx 站点配置
+│   └── local/                  本机开发形态：Windows 数据层 + 启动脚本
 ├── db/                         数据库初始化（建库 / 建表 / 建管理员 / 默认设置）
 ├── docker-compose.yaml         数据层与网关（mysql / redis / nginx）
 ├── .env.example                compose 环境变量示例
@@ -80,6 +81,7 @@ evermodel_ops/
 | 构建后端、打后端发布包 | [`backend/BUILD.md`](backend/BUILD.md) |
 | 托管后端 5 个进程、查各服务启停命令 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) |
 | 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
+| 在本机 Windows 上开发调试 | [`deploy/local/README.md`](deploy/local/README.md) + [`docs/LOCAL_DEV_GUIDE.md`](docs/LOCAL_DEV_GUIDE.md) |
 
 ---
 
@@ -174,7 +176,7 @@ bash db/init.sh
 > - 数据持久化在 named volume（`mysql_data` / `redis_data`），重建容器不丢数据。
 > - **改 `.env` 里的密码对已存在的数据卷无效**（镜像只在首次初始化数据卷时读这些变量）；
 >   换密码要么 `docker compose down -v` 重建，要么在库里 `ALTER USER`，见 `db/README.md` §5。
-> - 别和 `deploy-local/docker-compose.yml` 同时启动 —— 容器名与端口相同，是同一套栈的两种形态。
+> - 别和 `deploy/local/docker-compose.yml` 同时启动 —— 容器名与端口相同，是同一套栈的两种形态。
 
 ### 3. 部署后端
 

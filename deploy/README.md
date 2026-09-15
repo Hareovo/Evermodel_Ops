@@ -5,14 +5,16 @@
 
 ```
 deploy/
-├── supervisor/     后端 5 个进程的托管（supervisor + systemd）+ 各服务启停命令
-└── nginx/          容器内 nginx 站点配置（前端静态文件 + /api 反向代理）
+├── supervisor/     生产形态：后端 5 个进程的托管（supervisor + systemd）+ 各服务启停命令
+├── nginx/          容器内 nginx 站点配置（前端静态文件 + /api 反向代理）
+└── local/          本机开发形态：Windows + Docker Desktop 的数据层与启动脚本
 ```
 
 | 目录 | 解决什么问题 | 入口文档 |
 |---|---|---|
 | `supervisor/` | 后端不是单进程，是 5 个常驻进程；谁拉起它们、挂了怎么办、日志写哪、单个怎么重启 | [`supervisor/README.md`](supervisor/README.md) |
 | `nginx/` | nginx 反代规则：`/api` 剥前缀转 gunicorn、`/api/ws/` 转 daphne、SPA 回退 index.html | [`nginx/evermodel_ops.conf`](nginx/evermodel_ops.conf) |
+| `local/` | 在本机 Windows 上开发调试时的快捷启动（数据层 13306、后端 `runserver` 热重载、三个 job 进程） | [`local/README.md`](local/README.md) |
 
 ## 一、最短路径
 
@@ -60,6 +62,7 @@ nginx:80 ──┬── /api/ws/  ──> :9002
 
 ## 三、其他
 
-- 本机 Windows 开发环境的脚手架在 `deploy-local/`（端口 13306、后端 `runserver` 热重载），
+- 本机 Windows 开发环境的脚手架在 `deploy/local/`（端口 13306、后端 `runserver` 热重载），
   与这里是同一套栈的两种形态，**不要同时启动**（容器名与端口相同）。
-- `deploy-ubuntu/` 是早先的 Ubuntu 生产部署手册，其中 supervisor 部分已改为指向本目录。
+- 早先的 `deploy-ubuntu/` 已移除：容器定义并入根 `docker-compose.yaml`，库初始化并入 `db/`，
+  supervisor 与 nginx 部分并入本目录。

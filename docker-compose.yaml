@@ -19,8 +19,8 @@
 #   6379  redis
 #   80    nginx
 #
-# ⚠️ 不要与 deploy-local/docker-compose.yml 同时启动 —— 容器名与端口相同，
-#    它们是同一套栈的两种形态（本文件=标准形态，deploy-local=本机 Windows 开发形态）。
+# ⚠️ 不要与 deploy/local/docker-compose.yml 同时启动 —— 容器名与端口相同，
+#    它们是同一套栈的两种形态（本文件=标准形态，deploy/local=本机 Windows 开发形态）。
 # ============================================================================
 name: evermodel_ops
 

@@ -286,15 +286,3 @@ redis-cli -n 1 llen spug:schedule
 | 改了配置不生效 | 程序定义改动用 `systemctl reload`；主配置改动用 `systemctl restart`；Python 代码改动要 `restart` |
 | 9001/9002 被占用 | 同时跑了发行版 `supervisor.service`，或旧的手工 `runserver` 没杀干净：`ss -lntp \| grep 900` |
 
----
-
-## 附：从旧版 `backend/tools/supervisor-evermodel.ini` 迁移
-
-旧版把 5 个 program 写在一个 ini 里、路径硬编码 `/data/evermodel_ops`，且**没有** unit 文件与
-`__APP_DIR__` 占位符。现在这个目录是它的替代物（旧文件已删除），迁移就是：
-
-```bash
-sudo systemctl disable --now supervisor 2>/dev/null || true    # 如还在用发行版实例
-sudo rm -f /etc/supervisor/conf.d/evermodel_ops.conf           # 清掉旧位置
-sudo bash deploy/supervisor/install.sh --app-dir /data/evermodel_ops
-```
