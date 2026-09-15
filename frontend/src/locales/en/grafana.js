@@ -18,17 +18,6 @@ const grafana = {
     'An iframe cannot carry the Grafana session, so anonymous read-only access has to be allowed in Grafana:',
   '改完重启 Grafana 容器即可，本页刷新后生效。':
     'Restart the Grafana container afterwards, then refresh this page.',
-  '深色更贴合大屏，浅色与后台主题一致':
-    'Dark suits wall displays, light matches the admin theme',
-  '深色': 'Dark',
-  '浅色': 'Light',
-  '刷新频率': 'Refresh interval',
-  '不自动刷新': 'Off',
-  '30 秒': '30 seconds',
-  '1 分钟': '1 minute',
-  '5 分钟': '5 minutes',
-  '15 分钟': '15 minutes',
-  '重新加载': 'Reload',
   '全屏': 'Fullscreen',
   '正在加载看板...': 'Loading dashboard...',
   'Grafana 中还没有可展示的看板': 'No dashboards to display yet',

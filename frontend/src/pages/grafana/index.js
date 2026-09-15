@@ -5,11 +5,11 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react';
-import { Alert, Button, Select, Space, Spin, Switch, Tabs, Tooltip } from 'antd';
-import { ReloadOutlined, FullscreenOutlined } from '@ant-design/icons';
+import { Alert, Button, Spin, Tabs } from 'antd';
+import { FullscreenOutlined } from '@ant-design/icons';
 import { Breadcrumb } from 'components';
 import { t } from 'libs';
-import store, { REFRESH_OPTIONS } from './store';
+import store from './store';
 import { GRAFANA_INI } from './ini';
 import styles from './index.module.less';
 
@@ -81,44 +81,9 @@ export default observer(function () {
           }}
           items={dashboards.map(item => ({key: item.uid, label: item.title}))}
           tabBarExtraContent={
-            <Space size={12}>
-              <Tooltip title={t('深色更贴合大屏，浅色与后台主题一致')}>
-                <Space size={6}>
-                  <span className={styles.label}>{store.theme === 'dark' ? t('深色') : t('浅色')}</span>
-                  <Switch
-                    size="small"
-                    checked={store.theme === 'dark'}
-                    onChange={checked => {
-                      setLoading(true);
-                      store.theme = checked ? 'dark' : 'light'
-                    }}/>
-                </Space>
-              </Tooltip>
-              <Space size={6}>
-                <span className={styles.label}>{t('刷新频率')}</span>
-                <Select
-                  size="small"
-                  style={{width: 112}}
-                  value={store.refresh}
-                  onChange={value => store.refresh = value}>
-                  {REFRESH_OPTIONS.map(item => (
-                    <Select.Option key={item.value} value={item.value}>{t(item.label)}</Select.Option>
-                  ))}
-                </Select>
-              </Space>
-              <Button
-                size="small"
-                icon={<ReloadOutlined/>}
-                onClick={() => {
-                  setLoading(true);
-                  store.reloadToken++;
-                }}>
-                {t('重新加载')}
-              </Button>
-              <Button size="small" icon={<FullscreenOutlined/>} onClick={onFullscreen}>
-                {t('全屏')}
-              </Button>
-            </Space>
+            <Button size="small" icon={<FullscreenOutlined/>} onClick={onFullscreen}>
+              {t('全屏')}
+            </Button>
           }/>
       </div>
 
@@ -132,7 +97,7 @@ export default observer(function () {
               </div>
             )}
             <iframe
-              key={`${store.activeKey}-${store.reloadToken}`}
+              key={store.activeKey}
               className={styles.frame}
               title={store.activeKey}
               src={store.activeUrl}
