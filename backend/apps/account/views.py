@@ -3,7 +3,7 @@
 # Released under the AGPL-3.0 License.
 from django.core.cache import cache
 from django.conf import settings
-from libs.mixins import View
+from django.views.generic import View
 from libs import JsonParser, Argument, human_datetime, json_response
 from libs.utils import get_request_real_ip
 from apps.account.models import User, History

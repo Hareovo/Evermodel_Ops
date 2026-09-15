@@ -79,7 +79,7 @@ class TaskView(View):
             Argument('params', type=dict, handler=json.dumps, default={})
         ).parse(request.body)
         if error is None:
-            token, rds = uuid.uuid4().hex, get_redis_connection()
+            token = uuid.uuid4().hex
             form.host_ids.sort()
             if form.template_id:
                 template = ExecTemplate.objects.filter(pk=form.template_id).first()

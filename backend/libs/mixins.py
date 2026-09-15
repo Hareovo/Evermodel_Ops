@@ -1,7 +1,6 @@
 # Evermodel Ops
 # Copyright (c) OpenSpug Organization. <spug.dev@gmail.com>
 # Released under the AGPL-3.0 License.
-from django.views.generic import View
 
 
 # 混入类，提供Model实例to_dict方法

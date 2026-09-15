@@ -1,7 +1,7 @@
 # Evermodel Ops
 # Copyright (c) OpenSpug Organization. <spug.dev@gmail.com>
 # Released under the AGPL-3.0 License.
-from libs.mixins import View
+from django.views.generic import View
 from libs import json_response
 from apps.account.models import History
 
