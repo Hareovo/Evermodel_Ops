@@ -29,55 +29,96 @@
 | 任务队列 | Redis —— 自研轻量队列，不依赖 Celery |
 | 前端 | React 18 / Ant Design 4 / react-app-rewired |
 | 数据库 | MariaDB 10.8（兼容 MySQL） |
-| 过程管理 | supervisor（5 个后端进程）+ nginx |
+| 进程管理 | supervisor（5 个后端进程）+ systemd（守护 supervisor）+ nginx |
 
 ## 目录结构
 
 ```
 evermodel_ops/
-├── backend/                Django 后端
-│   ├── apps/               业务模块
-│   │   ├── host/           主机管理
-│   │   ├── exec/           批量执行、文件分发
-│   │   ├── schedule/       任务计划
-│   │   ├── monitor/        监控检测
-│   │   ├── alarm/          告警中心
-│   │   ├── file/           文件管理
-│   │   ├── setting/        系统设置、接口文档、Grafana 大屏
-│   │   └── account/        账号
-│   ├── consumer/           WebSocket 消费者（Web 终端、实时输出）
-│   ├── libs/               公共库（SSH 通道、告警通知、参数解析）
-│   ├── tools/              部署脚本（supervisor 配置、gunicorn / daphne 启动脚本）
-│   └── evermodel_ops/      Django 工程配置
-└── frontend/               React 前端
+├── backend/                    Django 后端
+│   ├── BUILD.md                后端构建与打包说明（产出 dist/*.tar.gz）
+│   ├── apps/                   业务模块
+│   │   ├── account/            账号
+│   │   ├── host/               主机管理
+│   │   ├── exec/               批量执行、文件分发
+│   │   ├── schedule/           任务计划
+│   │   ├── monitor/            监控检测
+│   │   ├── alarm/              告警中心
+│   │   ├── file/               文件管理
+│   │   └── setting/            系统设置、接口文档、监控大屏
+│   ├── consumer/               WebSocket 消费者（Web 终端、实时输出）
+│   ├── libs/                   公共库（SSH 通道、告警通知、中间件）
+│   ├── evermodel_ops/          Django 工程配置（settings.py / overrides.py）
+│   ├── tools/                  后端自带脚本
+│   │   ├── start-*.sh          5 个服务的启动命令（由 supervisor 调用）
+│   │   ├── build_release.py    打后端发布包
+│   │   └── migrate.py          版本升级时的数据迁移
+│   ├── logs/  repos/  storage/ 运行期目录（不入库；logs 必须存在，否则进程起不来）
+│   └── dist/                   后端发布包产出（不入库）
+├── frontend/                   React 前端
+│   ├── BUILD.md                前端构建与打包说明（产出 dist/*.tar.gz）
+│   ├── src/  public/  scripts/ 源码与构建入口
+│   ├── config-overrides.js     webpack 定制（含 Workbox 摘除补丁，勿删）
+│   ├── build/                  构建产物 = nginx 站点根（不入库）
+│   └── dist/                   前端发布包产出（不入库）
+├── deploy/                     部署脚手架
+│   ├── supervisor/             后端 5 进程托管（supervisor + systemd）+ 启停命令文档
+│   └── nginx/                  容器内 nginx 站点配置
+├── db/                         数据库初始化（建库 / 建表 / 建管理员 / 默认设置）
+├── docker-compose.yaml         数据层与网关（mysql / redis / nginx）
+├── .env.example                compose 环境变量示例
+└── README.md
 ```
+
+### 先看哪个文档
+
+| 要做什么 | 看哪里 |
+|---|---|
+| 起数据层（MySQL / Redis / Nginx） | 本文件「部署到 Linux 服务器」§2；配置在 `docker-compose.yaml` + `.env.example` |
+| 初始化数据库、建管理员 | [`db/README.md`](db/README.md) |
+| 构建前端、打前端发布包 | [`frontend/BUILD.md`](frontend/BUILD.md) |
+| 构建后端、打后端发布包 | [`backend/BUILD.md`](backend/BUILD.md) |
+| 托管后端 5 个进程、查各服务启停命令 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) |
+| 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
 
 ---
 
 ## 部署到 Linux 服务器
 
 > 目标系统：Ubuntu 20.04 / 22.04 / 24.04（x86_64），其余发行版步骤同理。
-> 后端的 supervisor 配置与启动脚本路径**写死了 `/data/evermodel_ops`**，请按此目录部署。
+> `deploy/supervisor/` 里的配置用 `__APP_DIR__` 占位符，`install.sh` 会替换成实际部署路径，
+> 所以部署目录可以自选（本文档以 `/data/evermodel_ops` 为例）。
 
 ### 部署架构
 
 ```
-浏览器 ──> nginx（宿主机，:80）
-             ├── /api/ws/  ──> 127.0.0.1:9002  daphne      WebSocket（Web 终端、实时输出）
-             ├── /api/     ──> 127.0.0.1:9001  gunicorn    REST API
-             └── 其余      ──> /data/evermodel_ops/frontend/build   前端静态文件
+浏览器
+  │
+  ▼
+nginx:80 ──┬── /api/ws/ ──> 127.0.0.1:9002  daphne     WebSocket（Web 终端、执行实时输出）
+           ├── /api/    ──> 127.0.0.1:9001  gunicorn   REST API
+           └── 其余      ──> frontend/build           前端静态文件
 
-supervisor 托管 5 个后端进程（均在 backend/venv 内运行）
-  ├── evermodel_ops-api         gunicorn :9001
-  ├── evermodel_ops-ws          daphne   :9002
-  ├── evermodel_ops-worker      批量执行 / 任务计划 / 监控 的执行器
-  ├── evermodel_ops-monitor     监控检测
-  └── evermodel_ops-scheduler   任务计划调度
+systemd: evermodel_ops.service                 ← 守护 supervisor 本体（挂了自动重拉）
+  └── supervisord（5 个后端进程，均在 backend/venv 内运行）
+        ├── evermodel_ops-api         gunicorn :9001
+        ├── evermodel_ops-ws          daphne   :9002
+        ├── evermodel_ops-worker      批量执行 / 任务计划 / 监控的执行器
+        ├── evermodel_ops-monitor     监控检测
+        └── evermodel_ops-scheduler   任务计划调度
 
-数据层（Docker 或已有实例）
-  ├── MariaDB   127.0.0.1:3306
-  └── Redis     127.0.0.1:6379
+数据层（Docker，见根目录 docker-compose.yaml）
+  ├── MariaDB   127.0.0.1:3306   库 evermodel_ops，账号 root / evermodel_ops（初始值）
+  └── Redis     127.0.0.1:6379   业务队列 + WebSocket channel layer
 ```
+
+配置全部集中在三处，别散着改：
+
+| 关注点 | 位置 |
+|---|---|
+| 数据层与网关 | `docker-compose.yaml` + `.env` |
+| 后端运行期配置（库地址、密码、Grafana 地址） | `backend/evermodel_ops/overrides.py` 或 `EVERMODEL_*` 环境变量 |
+| 进程托管与日志 | `deploy/supervisor/` |
 
 ### 1. 环境准备
 
@@ -102,85 +143,61 @@ sudo systemctl enable --now docker
 
 ### 2. 数据层（MariaDB / Redis）
 
-```bash
-sudo mkdir -p /data/evermodel_ops/db
-cd /data/evermodel_ops/db
-```
-
-新建 `docker-compose.yml`：
-
-```yaml
-services:
-  mysql:
-    image: mariadb:10.8
-    container_name: spug-mysql
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:3306:3306"
-    environment:
-      MYSQL_DATABASE: evermodel
-      MYSQL_USER: evermodel
-      MYSQL_PASSWORD: ${EVERMODEL_MYSQL_PASSWORD:?请在 .env 中填写密码}
-      MYSQL_ROOT_PASSWORD: ${EVERMODEL_MYSQL_ROOT_PASSWORD:?请在 .env 中填写密码}
-      TZ: Asia/Shanghai
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-  redis:
-    image: redis:7-alpine
-    container_name: spug-redis
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redis_data:/data
-
-volumes:
-  mysql_data:
-  redis_data:
-```
-
-新建 `.env`（**不要提交到版本库**），填写强密码：
+仓库根目录的 **`docker-compose.yaml`** 就是数据层与网关的单文件定义（mysql / redis / nginx），
+复制一份环境变量文件后直接起，不需要手抄配置：
 
 ```bash
-cat > .env <<'EOF'
-EVERMODEL_MYSQL_PASSWORD=change-me
-EVERMODEL_MYSQL_ROOT_PASSWORD=change-me
-EOF
-chmod 600 .env
-sudo docker compose up -d
+cd /data/evermodel_ops
+cp .env.example .env      # ⚠️ 生产环境务必改 EVERMODEL_MYSQL_ROOT_PASSWORD
+docker compose up -d
+
+# 等数据库就绪（首次初始化数据卷需要十几秒）
+until docker exec spug-mysql mysqladmin ping -h 127.0.0.1 -uroot -pevermodel_ops --silent; do sleep 2; done
+echo "mysql ready"
+docker compose ps
 ```
 
-等待数据库就绪（首次初始化需要十几秒）：
+| 服务 | 容器名 | 端口 | 说明 |
+|---|---|---|---|
+| MariaDB 10.8 | `spug-mysql` | 3306（可用 `.env` 改） | 库 `evermodel_ops`，账号 `root` / `evermodel_ops` |
+| Redis 7 | `spug-redis` | 6379 | 业务队列 + channel layer，AOF 持久化，别关 |
+| nginx | `spug-nginx` | 80 | 前端静态文件 + `/api` 反代到宿主机 9001 / 9002 |
+
+**接着初始化数据库**（建表、建管理员、写默认设置）：
 
 ```bash
-until sudo docker exec spug-mysql mysqladmin ping -h 127.0.0.1 -uroot -p"$EVERMODEL_MYSQL_ROOT_PASSWORD" --silent; do sleep 2; done; echo "mysql ready"
-sudo docker compose ps
+bash db/init.sh
 ```
 
-> 数据持久化在 named volume（`mysql_data` / `redis_data`），重建容器不丢数据。
+细节与排查见 [`db/README.md`](db/README.md)。
+
+> - 数据持久化在 named volume（`mysql_data` / `redis_data`），重建容器不丢数据。
+> - **改 `.env` 里的密码对已存在的数据卷无效**（镜像只在首次初始化数据卷时读这些变量）；
+>   换密码要么 `docker compose down -v` 重建，要么在库里 `ALTER USER`，见 `db/README.md` §5。
+> - 别和 `deploy-local/docker-compose.yml` 同时启动 —— 容器名与端口相同，是同一套栈的两种形态。
 
 ### 3. 部署后端
 
-**上传代码**（排除 venv / repos / logs / storage —— venv 不能跨平台复用，
-`logs` / `storage` 是运行时目录，服务器上在第 4 步创建）：
+**打后端发布包**（完整说明见 [`backend/BUILD.md`](backend/BUILD.md)）：
 
 ```bash
 # 开发机
-tar czf evermodel_ops-backend.tar.gz \
-    --exclude='backend/venv' --exclude='backend/repos' --exclude='backend/logs' \
-    --exclude='backend/storage' --exclude='backend/__pycache__' backend
-scp evermodel_ops-backend.tar.gz user@SERVER:/tmp/
+cd backend
+python tools/build_release.py
+# -> backend/dist/evermodel_ops-v4.0.1.tar.gz（附 .sha256）
+```
+
+脚本会自动排除 `venv / __pycache__ / logs / repos / storage / overrides.py`，
+并核对「归档条目数 == 磁盘文件数」，不一致直接中止。
+
+```bash
+scp dist/evermodel_ops-v4.0.1.tar.gz user@SERVER:/tmp/
 ```
 
 ```bash
-# 服务器
-sudo mkdir -p /data/evermodel_ops
-sudo tar xzf /tmp/evermodel_ops-backend.tar.gz -C /data/evermodel_ops
+# 服务器：解压到后端根目录（归档内不带 backend/ 前缀）
+sudo mkdir -p /data/evermodel_ops/backend
+sudo tar xzf /tmp/evermodel_ops-v4.0.1.tar.gz -C /data/evermodel_ops/backend
 ```
 
 **建 venv 装依赖**：
@@ -220,121 +237,71 @@ python manage.py updatedb                                       # 建表
 python manage.py user add -u admin -p '你的密码' -n 管理员 -s    # -s = 超级管理员
 ```
 
-### 4. 进程托管（supervisor）
+### 4. 进程托管（supervisor + systemd）
 
 后端不是单个进程，而是 **1 个 REST API + 1 个 WebSocket + 3 个异步执行器 = 5 个常驻进程**。
-仓库自带 `backend/tools/supervisor-evermodel.ini`（路径写死 `/data/evermodel_ops`），
-它调用同目录下的 `start-*.sh`，各进程实际执行的命令是：
+托管方式：**supervisor 管 5 个进程，systemd 守护 supervisord 本体**，
+配置全在 [`deploy/supervisor/`](deploy/supervisor/)。
+
+```bash
+sudo bash /data/evermodel_ops/deploy/supervisor/install.sh
+```
+
+脚本会：装 supervisor 包 → 建 `backend/logs` → 把配置里的 `__APP_DIR__` 占位符替换成
+实际部署路径 → 装 systemd 单元 → `systemctl enable --now evermodel_ops` → 打印 5 个进程状态。
 
 | supervisor 程序 | 实际执行的命令 | 作用 |
 |---|---|---|
 | `evermodel_ops-api` | `gunicorn -b 127.0.0.1:9001 -w 2 --threads 8 --access-logfile - evermodel_ops.wsgi` | REST API |
-| `evermodel_ops-ws` | `daphne -p 9002 evermodel_ops.asgi:application` | WebSocket（主机终端、批量执行实时输出） |
+| `evermodel_ops-ws` | `daphne -p 9002 evermodel_ops.asgi:application` | WebSocket（主机终端、执行实时输出） |
 | `evermodel_ops-worker` | `python manage.py runworker` | 批量执行 / 任务计划 / 监控的执行器 |
 | `evermodel_ops-monitor` | `python manage.py runmonitor` | 监控检测 |
 | `evermodel_ops-scheduler` | `python manage.py runscheduler` | 任务计划调度 |
 
-> 5 个脚本都会自行 `cd` 到 `backend/` 并 `source venv/bin/activate`，
-> 所以 ini 里不需要再配 `directory` 或 `environment`；日志由 supervisor 重定向到 `backend/logs/*.log`。
-> **只跑 `api` 不跑另外 4 个** → 平台能用，但批量执行会卡在 `Waiting for scheduling`、监控和任务计划完全不执行。
-
-**① 先建日志目录**（该目录不入库，缺了 5 个进程会全部启动失败）：
-
 ```bash
-sudo mkdir -p /data/evermodel_ops/backend/logs
+# 常用
+supervisorctl -c /etc/evermodel_ops/supervisord.conf status
+sudo systemctl restart evermodel_ops            # 重启整组
+sudo systemctl reload  evermodel_ops            # 改过程序配置后让它生效
 ```
 
-**② 启用**：
+> ⚠️ **只跑 `api` 不跑另外 4 个** → 平台打得开，但批量执行会卡在
+> `Waiting for scheduling`、监控与任务计划完全不执行。
+> ⚠️ `worker` / `scheduler` 启动时会清空对应 Redis 队列（防旧任务乱跑），
+> 重启后堆积的任务需要**重新提交一次**。
 
-```bash
-sudo cp /data/evermodel_ops/backend/tools/supervisor-evermodel.ini \
-        /etc/supervisor/conf.d/evermodel_ops.conf
-sudo supervisorctl reread && sudo supervisorctl update
-sudo supervisorctl status
-```
-
-期望五个进程全部 `RUNNING`，日志在 `/data/evermodel_ops/backend/logs/`。
-
-> ⚠️ 若 `status` 显示 `FATAL` / `BACKOFF` 或 `ERROR (spawn error)`，
-> 多数是第 ① 步的 `backend/logs/` 没建 —— supervisor 打不开 `stdout_logfile` 就会 spawn 失败。
-> `sudo mkdir -p /data/evermodel_ops/backend/logs && sudo supervisorctl restart all` 即可；
-> 具体原因看 `sudo tail -30 /var/log/supervisor/supervisord.log`。
->
-> ⚠️ `worker` / `scheduler` 启动时会清空对应 Redis 队列（防止旧任务乱跑），
-> 因此重启后需要**重新提交一次**堆积的任务。
+**每个服务的启停命令、systemd 层命令、安装后自检、故障速查** →
+[`deploy/supervisor/README.md`](deploy/supervisor/README.md)
 
 ### 5. 前端构建与 Nginx
 
-**构建前端**（两种方式任选）：
+**构建前端**（完整说明见 [`frontend/BUILD.md`](frontend/BUILD.md)）：
 
 ```bash
 # 方式 A（推荐）：开发机构建后上传，服务器无需装 Node
 cd frontend
-NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false CI=false \
-  node node_modules/react-app-rewired/bin/index.js build
-tar czf evermodel_ops-frontend-build.tar.gz -C build .
-scp evermodel_ops-frontend-build.tar.gz user@SERVER:/tmp/
+npm install
+npm run dist
+# -> frontend/dist/evermodel_ops-frontend-v4.0.1.tar.gz（附 .sha256）
+scp dist/evermodel_ops-frontend-v4.0.1.tar.gz user@SERVER:/tmp/
 ```
 
 ```bash
-# 服务器：解压到 nginx 站点根目录
+# 服务器：解压到 nginx 站点根目录（= frontend/build）
 sudo mkdir -p /data/evermodel_ops/frontend/build
-sudo tar xzf /tmp/evermodel_ops-frontend-build.tar.gz -C /data/evermodel_ops/frontend/build
+sudo tar xzf /tmp/evermodel_ops-frontend-v4.0.1.tar.gz -C /data/evermodel_ops/frontend/build
 ```
 
-> 方式 B：服务器上装 Node 22（`curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs`）
-> 后执行 `npm ci` 与同样的 build 命令。
+> 方式 B：服务器上装 Node 22
+> （`curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && sudo apt install -y nodejs`）
+> 后 `npm ci && npm run dist`。
 
-**配置 Nginx** —— 新建 `/etc/nginx/sites-available/evermodel_ops.conf`：
+**配置 Nginx** —— 反代规则已经写好在 [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf)：
 
-```nginx
-server {
-    listen       80 default_server;
-    server_name  _;                 # 有域名就填域名
-    root         /data/evermodel_ops/frontend/build;
-    client_max_body_size 100m;
-
-    gzip  on;
-    gzip_min_length  1k;
-    gzip_buffers     4 16k;
-    gzip_http_version 1.1;
-    gzip_comp_level  7;
-    gzip_types       text/plain text/css text/javascript application/javascript application/json;
-    gzip_vary on;
-
-    # WebSocket：主机在线终端 / 批量执行输出，长连接，读超时放宽
-    location ^~ /api/ws/ {
-        rewrite ^/api(.*) $1 break;
-        proxy_pass http://127.0.0.1:9002;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "Upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_read_timeout 3600s;
-    }
-
-    # REST API，nginx 剥掉 /api 前缀
-    location ^~ /api/ {
-        rewrite ^/api(.*) $1 break;
-        proxy_pass http://127.0.0.1:9001;
-        proxy_read_timeout 300s;
-        proxy_redirect off;
-        # 必须透传原始 Host，否则 Django 的 ALLOWED_HOSTS 校验会返回 400
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-
-    # 前端单页应用，回退到 index.html
-    location / {
-        try_files $uri /index.html;
-    }
-}
-```
-
-启用并重载：
+- 用根目录 compose 里的 **nginx 容器**：该文件已被挂载进容器，**不用另外配**。
+- 用**宿主机 nginx**：把它复制到 `/etc/nginx/sites-available/evermodel_ops.conf`，改两处 ——
+  `host.docker.internal` → `127.0.0.1`，`root /usr/share/nginx/html` →
+  `root /data/evermodel_ops/frontend/build` —— 然后：
 
 ```bash
 sudo rm -f /etc/nginx/sites-enabled/default
@@ -342,14 +309,19 @@ sudo ln -s /etc/nginx/sites-available/evermodel_ops.conf /etc/nginx/sites-enable
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
+> 自己写反代时有两个必须记住的点：
+> 1. `/api/` 要**剥掉 `/api` 前缀**（`rewrite ^/api(.*) $1 break;`）再转给 gunicorn；
+> 2. 必须**透传 `Host` 与 `X-Real-IP`** —— 前者不过 Django 的 `ALLOWED_HOSTS` 会返回 400，
+>    后者是 WebSocket 鉴权的一环；WebSocket 还要转发 `Upgrade` / `Connection` 两个头并把读超时放宽。
+
 ### 6. 验证
 
 | 检查 | 命令 / 操作 | 期望 |
 |---|---|---|
 | 数据层 | `docker compose ps` | mysql / redis Up |
-| 进程 | `sudo supervisorctl status` | 5 个进程全为 `RUNNING` |
+| 进程 | `supervisorctl -c /etc/evermodel_ops/supervisord.conf status` | 5 个进程全为 `RUNNING` |
 | 静态页面 | `curl -I http://127.0.0.1/` | 200（返回登录页 HTML） |
-| 反向代理 | `curl -o /dev/null -w "%{http_code}\n" http://127.0.0.1/api/host/` | 401（未带 token，说明已到后端） |
+| 反向代理 | `curl -o /dev/null -w "%{http_code}\n" http://127.0.0.1/api/account/login/` | 200（登录接口免鉴权，说明已到后端） |
 | 登录 | 浏览器 `http://SERVER/` → admin / 刚设的密码 | 落地 `/host` 主机管理页 |
 | Web 终端 | 主机列表点「终端」 | 连上不自动断 |
 | 监控 | 建一个监控项 | `latest_run_time` 有值、告警渠道能收到通知 |
@@ -357,38 +329,51 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 7. 日常运维
 
-**更新前端**：开发机构建 → 上传解压覆盖 `/data/evermodel_ops/frontend/build` → 浏览器 Ctrl+F5（无需重启进程）。
+**更新前端**：开发机 `cd frontend && npm run dist` → 上传解压覆盖 `/data/evermodel_ops/frontend/build`
+→ 浏览器 **Ctrl+F5**（chunk 名带哈希，不需要重启任何进程）。
 
-**更新后端**：上传代码（排除 venv）→ `source venv/bin/activate && pip install -r requirements.txt`
-→ 有表变更时 `python manage.py updatedb` → `sudo supervisorctl restart all`。
+**更新后端**：开发机 `cd backend && python tools/build_release.py` → 上传解压覆盖
+→ `source venv/bin/activate && pip install -r requirements.txt`
+→ 有表结构变更时 `python manage.py updatedb` → `sudo systemctl restart evermodel_ops`。
 
 **备份数据库**：
 
 ```bash
-sudo docker exec spug-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" spug' > spug-$(date +%F).sql
+docker exec spug-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" evermodel_ops' \
+  > evermodel_ops-$(date +%F).sql
 ```
 
 **常用命令**：
 
 ```bash
-sudo supervisorctl status
-sudo docker logs --tail 50 spug-mysql
+supervisorctl -c /etc/evermodel_ops/supervisord.conf status
+sudo systemctl status evermodel_ops
+docker compose ps
+docker logs --tail 50 spug-mysql
 tail -f /data/evermodel_ops/backend/logs/api.log
+```
+
+**三个异步队列（排查「提交了不动」）**：
+
+```bash
+redis-cli -n 1 llen spug:exec:worker      # 非 0 = worker 没消费
+redis-cli -n 1 llen spug:monitor          # 非 0 = monitor 没消费
+redis-cli -n 1 llen spug:schedule         # 非 0 = scheduler 没消费
 ```
 
 ### 8. 故障速查
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
-| 页面 502 | gunicorn / daphne 没起 | `supervisorctl status`；看 `logs/api.log` |
-| `supervisorctl status` 显示 5 个进程全 `FATAL` / `spawn error` | `backend/logs/` 目录不存在（`stdout_logfile` 打不开），该目录不入库 | `sudo mkdir -p /data/evermodel_ops/backend/logs && sudo supervisorctl restart all` |
+| 页面 502 | gunicorn / daphne 没起 | `supervisorctl -c /etc/evermodel_ops/supervisord.conf status`；看 `logs/api.log` |
+| 5 个进程全 `FATAL` / `spawn error` | **最常见**：`backend/logs/` 不存在（`stdout_logfile` 打不开），该目录不入库 | `sudo mkdir -p /data/evermodel_ops/backend/logs && sudo systemctl restart evermodel_ops` |
 | 页面 404 / 空白 | 前端产物没上传到位 | 确认 `/data/evermodel_ops/frontend/build/index.html` 存在 |
 | 接口 400 DisallowedHost | `ALLOWED_HOSTS` 没配 / Host 未透传 | 改 `overrides.py`；确认 nginx `proxy_set_header Host $host` |
 | pip 装 mysqlclient 报 `mysql.h: No such file` | 缺编译依赖 | 装 `gcc pkg-config default-libmysqlclient-dev libssl-dev python3-dev` |
 | 数据库连不上 | 容器没起 / 密码不一致 | `docker compose ps`；核对 `overrides.py` 与 `.env` 密码 |
 | Web 终端连上几秒断开 | redis-py 8 默认 socket 超时 | 配置里的 `REDIS_POOL_KWARGS socket_timeout: None` 不要删（已内置） |
-| 批量执行卡 `Waiting for scheduling` | worker 没起 | `supervisorctl restart evermodel_ops-worker`，任务需重新提交 |
-| 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen spug:monitor` 非 0 即征兆 |
+| 批量执行卡 `Waiting for scheduling` | worker 没起（不是脚本问题） | `supervisorctl -c /etc/evermodel_ops/supervisord.conf restart evermodel_ops-worker`，任务需重新提交 |
+| 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen spug:monitor` 非 0 即征兆。完整排查见 `deploy/supervisor/README.md` |
 
 ---
 
@@ -495,7 +480,9 @@ Grafana **12.4 起**，`?kiosk`（嵌入）模式会在视口底部叠一条白�
 | 环境变量 | 说明 |
 |---|---|
 | `EVERMODEL_SECRET_KEY` | Django SECRET_KEY，未设置时回退到仅供本地开发的默认值 |
-| `EVERMODEL_MYSQL_PASSWORD` | 业务数据库账号密码 |
+| `EVERMODEL_MYSQL_DB` | 库名，默认 `evermodel_ops` |
+| `EVERMODEL_MYSQL_USER` | 数据库账号，默认 `root` |
+| `EVERMODEL_MYSQL_PASSWORD` | 数据库密码，默认 `evermodel_ops`（**生产必须改**） |
 | `EVERMODEL_MYSQL_ROOT_PASSWORD` | 数据库 root 密码 |
 | `EVERMODEL_MYSQL_HOST` / `_PORT` | 数据库地址与端口（默认 `127.0.0.1:3306`） |
 | `EVERMODEL_REDIS_HOST` / `_PORT` | Redis 地址与端口（默认 `127.0.0.1:6379`） |

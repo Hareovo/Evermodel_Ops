@@ -11,6 +11,8 @@
 
 # production
 /build
+# 发布包（scripts/make-dist.js 的产出一律不入库）
+/dist
 
 # misc
 .DS_Store

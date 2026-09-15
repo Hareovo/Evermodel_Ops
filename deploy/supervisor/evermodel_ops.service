@@ -1,0 +1,46 @@
+; ============================================================================
+; Evermodel Ops — systemd 单元（守护 supervisord，supervisord 守护 5 个进程）
+;
+; 安装位置：/etc/systemd/system/evermodel_ops.service
+; 由 deploy/supervisor/install.sh 自动部署（会把 __APP_DIR__ 替换成实际路径）。
+;
+; 层级关系：
+;   systemd (evermodel_ops.service)
+;     └── supervisord -n          前台运行，挂了 systemd 5 秒后重拉
+;           ├── evermodel_ops-api
+;           ├── evermodel_ops-ws
+;           ├── evermodel_ops-worker
+;           ├── evermodel_ops-monitor
+;           └── evermodel_ops-scheduler
+;
+; 常用命令见同目录 README.md。
+; ============================================================================
+
+[Unit]
+Description=Evermodel Ops backend supervisor (5 processes)
+Documentation=file://__APP_DIR__/deploy/supervisor/README.md
+After=network-online.target
+Wants=network-online.target
+; 数据层（MySQL / Redis）若由 docker compose 提供，尽量等它先起来；
+; 没装 docker 时下面两行会被 systemd 忽略，不影响启动。
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+; supervisord 以前台方式运行（-n），进程生命周期完全交给 systemd 跟踪。
+; 配置文件里 nodaemon = true 与这里的 -n 是对应的，不能改成后台模式。
+ExecStart=/usr/bin/supervisord -n -c /etc/evermodel_ops/supervisord.conf
+; reload = 重新读取 conf.d 下的程序配置并按需增删进程（改完 ini 后 systemctl reload 即可）
+ExecReload=/bin/sh -c '/usr/bin/supervisorctl -c /etc/evermodel_ops/supervisord.conf reread && exec /usr/bin/supervisorctl -c /etc/evermodel_ops/supervisord.conf update'
+ExecStop=/usr/bin/supervisorctl -c /etc/evermodel_ops/supervisord.conf shutdown
+Restart=always
+RestartSec=5
+; KillMode=mixed：先给 supervisord 发 SIGTERM 让它挨个停子进程，超时后再 SIGKILL。
+; 用 control-group（默认）会直接杀整个 cgroup，子进程来不及优雅退出（WebSocket 会被硬断）。
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=90
+
+[Install]
+WantedBy=multi-user.target

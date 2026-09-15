@@ -10,7 +10,14 @@ backend/venv/
 **/node_modules/
 
 # ---- 构建产物 ----
+# frontend/build 是 CRA 的站点根产物，nginx 直接挂载它
 frontend/build/
+
+# ---- 发布包（.tar.gz）----
+# 前端：cd frontend && npm run dist          -> frontend/dist/
+# 后端：cd backend  && python tools/build_release.py -> backend/dist/
+frontend/dist/
+backend/dist/
 
 # ---- Python ----
 __pycache__/

@@ -12,3 +12,5 @@ evermodel_ops/overrides.py
 !/logs/.gitkeep
 /storage/transfer/*
 !/storage/transfer/.gitkeep
+# 发布包（tools/build_release.py 的产出一律不入库）
+/dist/

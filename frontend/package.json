@@ -22,9 +22,11 @@
     "xterm-addon-fit": "^0.7.0"
   },
   "scripts": {
-    "start": "NODE_OPTIONS='--openssl-legacy-provider' react-app-rewired start",
-    "build": "NODE_OPTIONS='--openssl-legacy-provider' GENERATE_SOURCEMAP=false react-app-rewired build",
-    "test": "react-app-rewired test",
+    "start": "node scripts/run.js start",
+    "build": "node scripts/run.js build",
+    "test": "node scripts/run.js test",
+    "dist": "node scripts/make-dist.js",
+    "dist:only": "node scripts/make-dist.js --no-build",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
