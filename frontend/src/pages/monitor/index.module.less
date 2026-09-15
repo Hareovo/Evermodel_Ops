@@ -42,6 +42,29 @@
     }
 }
 
+/* 卡片右上角的筛选项。标签与控件贴在一起（那 8px 由 .filterLabel::after 的右外边距给出），
+   项与项之间由 Space 的 28px 拉开 —— 内外差距拉开，才看得出「标签-控件」的分组关系。 */
+.filterItem {
+    display: inline-flex;
+    align-items: center;
+
+    /* 控件不参与收缩：窗口窄时宁可整排排不下，也不要把 Select 压成几十像素
+       （antd v3 遗留样式造成过这种「下拉框被压扁」，见 deploy-local/README.md）。 */
+    > * {
+        flex: none;
+    }
+}
+
+/* 冒号交给 CSS 生成，参数与 antd 的 .ant-form-item-label > label::after 一致
+   （半角冒号 + margin: 0 8px 0 2px），这样这一排筛选和平台其它页面的筛选看起来是同一套；
+   也避免全角冒号把标签到控件的间距撑得比项间距还大。 */
+.filterLabel::after {
+    content: ':';
+    position: relative;
+    top: -0.5px;
+    margin: 0 8px 0 2px;
+}
+
 .notMatch {
     display: flex;
     justify-content: center;

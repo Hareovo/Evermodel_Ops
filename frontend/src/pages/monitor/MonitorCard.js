@@ -47,6 +47,22 @@ function CardItem(props) {
   )
 }
 
+/**
+ * 卡片右上角的一个筛选项：标签紧贴控件，冒号由 CSS 生成（见 index.module.less 的
+ * .filterLabel::after），与 antd Form.Item label 的写法一致 —— 平台其它页面的筛选栏
+ * 都是 Form.Item label，冒号间距是 `margin: 0 8px 0 2px`。
+ * 之前这里把全角冒号写进文案（t('分组：')），全角标点自带一整格空白，导致「标签到控件」
+ * 的空白比「筛选项之间」还大，整排看起来是一条平铺序列，分不清哪个标签配哪个框。
+ */
+function FilterItem(props) {
+  return (
+    <div className={styles.filterItem}>
+      <span className={styles.filterLabel}>{props.title}</span>
+      {props.children}
+    </div>
+  )
+}
+
 function MonitorCard() {
   const [autoReload, setAutoReload] = useState(false);
   const [status, setStatus] = useState();
@@ -68,27 +84,25 @@ function MonitorCard() {
   const filteredRecords = store.ovDataSource.filter(x => !status || x.status === status)
   return (
     <Card title={t('总览')} style={{marginBottom: 24}} bodyStyle={{padding: '12px 24px'}} extra={(
-      <Space size="middle">
-        <Space>
-          <div>{t('分组：')}</div>
-          <Select allowClear style={{minWidth: 150}} value={store.f_group} onChange={v => store.f_group = v}
+      <Space size={28}>
+        <FilterItem title={t('分组')}>
+          <Select allowClear style={{width: 150}} value={store.f_group} onChange={v => store.f_group = v}
                   placeholder={t('请选择')}>
             {store.groups.map(item => (
               <Select.Option value={item} key={item}>{item}</Select.Option>
             ))}
           </Select>
-        </Space>
-        <Space>
-          <div>{t('类型：')}</div>
+        </FilterItem>
+        <FilterItem title={t('类型')}>
           <Select allowClear style={{width: 120}} value={store.f_type} onChange={v => store.f_type = v}
                   placeholder={t('请选择')}>
             {store.types.map(item => <Select.Option key={item} value={item}>{item}</Select.Option>)}
           </Select>
-        </Space>
-        <Space>
-          <div>{t('名称：')}</div>
-          <Input allowClear value={store.f_name} onChange={e => store.f_name = e.target.value} placeholder={t('请输入')}/>
-        </Space>
+        </FilterItem>
+        <FilterItem title={t('名称')}>
+          <Input allowClear style={{width: 200}} value={store.f_name}
+                 onChange={e => store.f_name = e.target.value} placeholder={t('请输入')}/>
+        </FilterItem>
       </Space>
     )}>
       <Spin spinning={store.ovFetching}>
