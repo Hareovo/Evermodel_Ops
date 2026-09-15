@@ -9,11 +9,15 @@
              ├── /api/     ──> host.docker.internal:8000   （HTTP 与 WS 同一进程同一端口）
              └── 其余      ──> frontend/build 静态文件
 
-宿主机
-  └── backend   venv
-                ├── start-backend.bat   后端（runserver 0.0.0.0:8000，含 WebSocket）
-                └── start-jobs.bat      worker / scheduler / monitor 三个窗口
+宿主机  backend/venv
+          ├── 终端 1   manage.py runserver 0.0.0.0:8000   后端（HTTP + WebSocket）
+          ├── 终端 2   manage.py runworker
+          ├── 终端 3   manage.py runmonitor
+          └── 终端 4   manage.py runscheduler
 ```
+
+> 本目录**只放配置、不放脚本** —— 启动命令在下方「启动」一节，逐条照抄即可。
+> 原 `start-*.bat` 启动器与 `grafana-allow-embed.sh` 已移除，改为手工执行。
 
 ## 端口与凭据
 
@@ -28,28 +32,35 @@
 
 ## 启动（每天开机后）
 
-```bat
-:: 1. 数据层
-cd /d D:\Code\evermodel_ops\deploy\local
+四个终端窗口，各跑一条命令。
+
+```bash
+# ① 数据层 —— 在本目录执行
+cd D:\Code\evermodel_ops\deploy\local
 docker compose up -d
 
-:: 2. 后端（双击，或手动执行）
-start-backend.bat
+# ② 后端：HTTP + WebSocket（终端 1）
+cd D:\Code\evermodel_ops\backend
+./venv/Scripts/python.exe manage.py runserver 0.0.0.0:8000
 
-:: 3. 异步三进程（双击，会开三个窗口）
-start-jobs.bat
+# ③ 异步三进程（终端 2 / 3 / 4，各一条，别漏）
+cd D:\Code\evermodel_ops\backend
+./venv/Scripts/python.exe manage.py runworker
+./venv/Scripts/python.exe manage.py runmonitor
+./venv/Scripts/python.exe manage.py runscheduler
 ```
 
 浏览器打开 <http://127.0.0.1/>（走 nginx 80 入口，不要直接访问 8000），登录后落地 `/host`。
 
-⚠️ **只跑第 2 步 = 页面能建任务但永远不执行、不告警。** 三个进程都不在后端进程里。
-排查手法见 `docs/LOCAL_DEV_GUIDE.md` 第五节。
+⚠️ **只跑 ② 不跑 ③ = 页面能建任务但永远不执行、不告警。** 三个进程都不在后端进程里。
+`runserver` 自带热重载，改 Python 代码无需手动重启；但**改被多个进程读取的配置（如告警署名）
+要连同 ③ 的三个进程一起重启**。排查手法见 `docs/LOCAL_DEV_GUIDE.md` 第五节。
 
-## ⚠️ 不要与根目录的 docker-compose.yaml 同时启动
+## ⚠️ 不要与 deploy/docker-compose.yaml 同时启动
 
 两者是同一套栈的两种形态，**容器名与端口完全相同**，同时起会冲突：
 
-| | 根 `docker-compose.yaml`（标准 / 生产形态） | 本目录（本机开发形态） |
+| | `deploy/docker-compose.yaml`（标准 / 生产形态） | 本目录（本机开发形态） |
 |---|---|---|
 | compose 项目名 | `evermodel_ops` | `spug-dev` |
 | mysql 库 | `evermodel_ops` | `spug` |
@@ -64,11 +75,7 @@ start-jobs.bat
 |---|---|
 | `docker-compose.yml` | 本机数据层：mysql + redis + nginx |
 | `nginx.conf` | 容器 nginx 站点配置，反代到宿主机 8000 |
-| `start-backend.bat` | 启动 Django dev server |
-| `start-jobs.bat` | 一次开三个窗口：worker / scheduler / monitor |
-| `start-worker.bat` / `start-scheduler.bat` / `start-monitor.bat` | 单进程启动，被 `start-jobs.bat` 调用 |
 | `local-settings.sql` | 本地用到的运行期配置项 |
-| `grafana-allow-embed.sh` | 给外部 Grafana 打开 `allow_embedding` + 匿名访问（监控大屏 iframe 用） |
 | `.env` / `.env.example` | 数据库口令（`.env` 不入库） |
 
 ## 相关文档

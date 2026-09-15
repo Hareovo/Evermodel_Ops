@@ -12,7 +12,6 @@ Evermodel Ops 的后端**不是单个进程**，而是 **5 个常驻进程**。�
 | `supervisord.conf` | `/etc/evermodel_ops/supervisord.conf` | supervisord 主配置（unix socket、日志、include conf.d） |
 | `evermodel_ops.conf` | `/etc/evermodel_ops/conf.d/evermodel_ops.conf` | 5 个 `[program:*]` 定义（含 `__APP_DIR__` 占位符） |
 | `evermodel_ops.service` | `/etc/systemd/system/evermodel_ops.service` | systemd 单元，守护 supervisord 本体 |
-| `install.sh` | — | 一键安装（幂等，可重复执行） |
 
 **层级关系**：
 
@@ -30,38 +29,64 @@ systemd  evermodel_ops.service          ← 守护「supervisord 本体」，挂
 运行目录，用 supervisor 统一管理后，**加/减进程、看日志、批量重启**都是一句话的事
 （`supervisorctl update` / `restart all`）。systemd 只负责「supervisord 不许死」。
 
-## 二、安装
+## 二、安装（手工，5 步）
+
+本目录**只有配置文件、没有安装脚本** —— 按下面步骤逐条执行即可，全部可复制粘贴。
+下文用 `APP_DIR` 代表部署路径，按实际改（例句取 `/data/evermodel_ops`）。
 
 ```bash
-# 默认部署路径取仓库根（本脚本上两级目录）
-sudo bash deploy/supervisor/install.sh
+APP_DIR=/data/evermodel_ops
 
-# 指定部署路径
-sudo bash deploy/supervisor/install.sh --app-dir /data/evermodel_ops
+# ① 装 supervisor（已装可跳过）
+sudo apt update && sudo apt install -y supervisor
+
+# ② 建运行目录 —— ⚠️ 必须做，理由见下方
+sudo mkdir -p "$APP_DIR/backend/logs"
+sudo mkdir -p /etc/evermodel_ops/conf.d /var/log/evermodel_ops
+
+# ③ 装主配置与程序定义（把 __APP_DIR__ 占位符换成实际路径）
+sudo install -m 0644 "$APP_DIR/deploy/supervisor/supervisord.conf" \
+  /etc/evermodel_ops/supervisord.conf
+sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.conf" \
+  | sudo tee /etc/evermodel_ops/conf.d/evermodel_ops.conf > /dev/null
+
+# ④ 装 systemd 单元
+sudo install -m 0644 "$APP_DIR/deploy/supervisor/evermodel_ops.service" \
+  /etc/systemd/system/evermodel_ops.service
+sudo systemctl daemon-reload
+
+# ⑤ 开机自启并立刻拉起
+sudo systemctl enable --now evermodel_ops
 ```
 
-脚本会自动：装 supervisor 包（缺的话）→ 建 `backend/logs` → 替换 `__APP_DIR__` →
-装 systemd 单元 → `systemctl enable --now evermodel_ops` → 打印 5 个进程状态。
-
-> ⚠️ **`backend/logs` 目录必须存在**。它不在仓库里（运行期目录，`logs/*` 被 gitignore，
-> 只保留 `.gitkeep`），而 5 个 `stdout_logfile` 都指向它 —— 目录缺失时 supervisor
-> 打不开日志文件，5 个进程会**全部** `ERROR (spawn error)`。install.sh 已处理。
-
-### 方式 B：直接用发行版自带的 supervisor 包
-
-如果你不想引入额外的 systemd 单元，Ubuntu 的 `supervisor` 包本身就带
-`supervisor.service`（开机自启 + 守护），此时只要把程序配置丢进 `conf.d`：
+确认起来：
 
 ```bash
-sudo cp deploy/supervisor/evermodel_ops.conf /tmp/prog.conf
-sudo sed -i 's|__APP_DIR__|/data/evermodel_ops|g' /tmp/prog.conf
-sudo install -m 0644 /tmp/prog.conf /etc/supervisor/conf.d/evermodel_ops.conf
+sudo systemctl status evermodel_ops --no-pager
+supervisorctl -c /etc/evermodel_ops/supervisord.conf status    # 期望 5 个 RUNNING
+```
+
+> ⚠️ **`backend/logs` 目录必须存在**（第 ② 步别省）。它不在仓库里 —— 运行期目录，
+> `logs/*` 被 gitignore、只保留 `.gitkeep`；而 5 个 `stdout_logfile` 都指向它。
+> 目录缺失时 supervisor 打不开日志文件，5 个进程会**全部** `ERROR (spawn error)`。
+
+> 改过 `evermodel_ops.conf`（增删进程、改日志路径）后：`sudo systemctl reload evermodel_ops`。
+
+### 方式 B：用发行版自带的 supervisor.service
+
+不想引入额外的 systemd 单元时，Ubuntu 的 `supervisor` 包自带 `supervisor.service`
+（开机自启 + 守护），把程序配置丢进它的 `conf.d` 即可：
+
+```bash
+APP_DIR=/data/evermodel_ops
+sudo mkdir -p "$APP_DIR/backend/logs"
+sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.conf" \
+  | sudo tee /etc/supervisor/conf.d/evermodel_ops.conf > /dev/null
 sudo systemctl enable --now supervisor
 sudo supervisorctl reread && sudo supervisorctl update
 ```
 
 ⚠️ 两种方式**不要同时用**，会起两个 supervisord 抢 9001/9002 端口。
-`install.sh` 检测到 `supervisor.service` 在跑时会给出警告。
 
 ---
 
@@ -240,7 +265,7 @@ sudo systemctl stop    evermodel_ops      # 停止整组（优雅停 5 个进程
 sudo systemctl restart evermodel_ops      # 重启整组
 sudo systemctl reload  evermodel_ops      # 重新读取 conf.d 的程序定义（等价 reread + update）
 sudo systemctl status  evermodel_ops      # 看 supervisord 本体状态
-sudo systemctl enable  evermodel_ops      # 开机自启（install.sh 已执行）
+sudo systemctl enable  evermodel_ops      # 开机自启（安装时已执行）
 sudo systemctl disable evermodel_ops      # 取消开机自启
 
 journalctl -u evermodel_ops -n 100 --no-pager              # supervisord 本体的输出

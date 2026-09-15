@@ -1,36 +1,57 @@
-# 部署脚手架（deploy/）
+# 部署（deploy/）
 
-这里放**怎么把平台跑起来**的东西。应用本身的代码在 `backend/` 与 `frontend/`，
-数据层的容器定义在仓库根的 `docker-compose.yaml`，数据库初始化在 `db/`。
+平台部署所需的一切都在这个目录里 —— **只有配置和文档，没有脚本**，全部手工执行。
 
 ```
 deploy/
-├── supervisor/     生产形态：后端 5 个进程的托管（supervisor + systemd）+ 各服务启停命令
-├── nginx/          容器内 nginx 站点配置（前端静态文件 + /api 反向代理）
-└── local/          本机开发形态：Windows + Docker Desktop 的数据层与启动脚本
+├── docker-compose.yaml        数据层与网关：MariaDB + Redis + nginx（标准形态）
+├── .env.example               compose 环境变量示例（复制成 .env；.env 不入库）
+├── db/                        数据库初始化
+│   ├── init.sql               建库 + 建/授权账号 + 字符集
+│   ├── init.defaults.sql      平台默认设置（建表之后执行）
+│   └── README.md              四步初始化命令 + 故障速查
+├── nginx/
+│   └── evermodel_ops.conf     容器内 nginx 站点配置（静态文件 + /api 反向代理）
+├── supervisor/                后端 5 个进程托管（supervisor + systemd）
+│   ├── supervisord.conf       supervisord 主配置
+│   ├── evermodel_ops.conf     5 个 [program:*] 定义（含 __APP_DIR__ 占位符）
+│   ├── evermodel_ops.service  systemd 单元，守护 supervisord 本体
+│   └── README.md              逐服务启停命令 + 自检 + 故障速查
+├── local/                     本机开发形态（Windows + Docker Desktop）
+│   └── README.md              端口、启动命令、与标准形态的差异
+└── README.md                  本文件
 ```
 
-| 目录 | 解决什么问题 | 入口文档 |
+| 组成 | 解决什么问题 | 入口文档 |
 |---|---|---|
+| `docker-compose.yaml` + `.env.example` | 数据层与网关一次起好：MariaDB 10.8、Redis 7、nginx | 本文件 §一 |
+| `db/` | 库是空的 —— 建库、建表、建管理员、写默认设置 | [`db/README.md`](db/README.md) |
+| `nginx/` | 反代规则：`/api` 剥前缀转 gunicorn、`/api/ws/` 转 daphne、SPA 回退 index.html | [`nginx/evermodel_ops.conf`](nginx/evermodel_ops.conf) |
 | `supervisor/` | 后端不是单进程，是 5 个常驻进程；谁拉起它们、挂了怎么办、日志写哪、单个怎么重启 | [`supervisor/README.md`](supervisor/README.md) |
-| `nginx/` | nginx 反代规则：`/api` 剥前缀转 gunicorn、`/api/ws/` 转 daphne、SPA 回退 index.html | [`nginx/evermodel_ops.conf`](nginx/evermodel_ops.conf) |
-| `local/` | 在本机 Windows 上开发调试时的快捷启动（数据层 13306、后端 `runserver` 热重载、三个 job 进程） | [`local/README.md`](local/README.md) |
+| `local/` | 本机 Windows 上开发调试（数据层 13306、后端 `runserver` 热重载、三个 job 进程） | [`local/README.md`](local/README.md) |
 
-## 一、最短路径
+---
+
+## 一、部署顺序（4 步）
+
+以 `/data/evermodel_ops` 为例。每步的完整命令在对应文档里，这里只给主干。
 
 ```bash
-# ① 数据层与网关（仓库根）
-cp .env.example .env          # 生产环境改密码
+APP_DIR=/data/evermodel_ops
+
+# ① 数据层与网关 —— MariaDB / Redis / nginx
+cd $APP_DIR/deploy
+cp .env.example .env          # ⚠️ 生产环境务必改 EVERMODEL_MYSQL_ROOT_PASSWORD
 docker compose up -d
 
-# ② 数据库初始化（建库 / 建表 / 建管理员 / 默认设置）
-bash db/init.sh
+# ② 数据库初始化 —— 建库 → 建表 → 建管理员 → 写默认设置
+#    四条命令见 deploy/db/README.md 第一节
 
 # ③ 后端 5 个进程 + systemd 守护
-sudo bash deploy/supervisor/install.sh
+#    五条命令见 deploy/supervisor/README.md 第二节
 
-# ④ 前端产物（开发机构建后上传，见 frontend/BUILD.md）
-#    解压到 frontend/build —— nginx 容器挂载的就是这个目录
+# ④ 前端产物 —— 开发机 npm run dist 后上传
+#    解压到 $APP_DIR/frontend/build，nginx 容器挂载的就是这个目录
 ```
 
 装完自检：
@@ -58,11 +79,26 @@ nginx:80 ──┬── /api/ws/  ──> :9002
 ```
 
 > ⚠️ 少起 `worker` / `monitor` / `scheduler` 的后果是「平台看着正常、功能不工作」，
-> 对照表见 `supervisor/README.md` §三。
+> 对照表见 [`supervisor/README.md`](supervisor/README.md) §三。
 
-## 三、其他
+## 三、为什么这里没有一键脚本
 
-- 本机 Windows 开发环境的脚手架在 `deploy/local/`（端口 13306、后端 `runserver` 热重载），
-  与这里是同一套栈的两种形态，**不要同时启动**（容器名与端口相同）。
-- 早先的 `deploy-ubuntu/` 已移除：容器定义并入根 `docker-compose.yaml`，库初始化并入 `db/`，
-  supervisor 与 nginx 部分并入本目录。
+本目录刻意**只放配置、不放 shell 脚本**：部署是低频、需要边看边判断的操作，
+一条条手工执行才能看清每一步在动什么；脚本反而会把「失败在哪一步」藏起来。
+所以原来的 `deploy/supervisor/install.sh` 与 `db/init.sh` 已移除 ——
+对应步骤改成文档里可**直接复制粘贴**的命令序列（见各自的 README）。
+
+> 例外：`backend/tools/start-*.sh`（5 个）不是部署脚本，而是**进程启动包装** ——
+> supervisor 的 `command` 指向它们，里面只做 `cd backend && source venv/bin/activate`
+> 再 `exec` 真正的程序，属于应用代码，故留在 `backend/`。
+
+## 四、与仓库其他部分的关系
+
+| 部分 | 位置 |
+|---|---|
+| 应用代码 | `backend/`（Django）、`frontend/`（React） |
+| 部署资产（本目录） | `deploy/` |
+| 架构说明与二开改动记录 | `docs/` |
+
+> `local/` 是本机 Windows 开发形态，与 `docker-compose.yaml` **容器名和端口完全相同** ——
+> 同一套栈的两种形态，**不要同时启动**，详见 [`local/README.md`](local/README.md)。

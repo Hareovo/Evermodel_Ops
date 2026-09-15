@@ -2,7 +2,7 @@
 ; Evermodel Ops — systemd 单元（守护 supervisord，supervisord 守护 5 个进程）
 ;
 ; 安装位置：/etc/systemd/system/evermodel_ops.service
-; 由 deploy/supervisor/install.sh 自动部署（会把 __APP_DIR__ 替换成实际路径）。
+; 安装方式见同目录 README.md 第二节（把 __APP_DIR__ 替换成实际路径）。
 ;
 ; 层级关系：
 ;   systemd (evermodel_ops.service)

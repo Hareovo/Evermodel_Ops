@@ -4,9 +4,9 @@
 -- 执行时机：**必须在 `manage.py updatedb` 之后**（settings 表那时才被建出来）。
 --
 -- 用法：
---     docker exec -i spug-mysql mysql -uroot -pevermodel_ops evermodel_ops < db/init.defaults.sql
+--     docker exec -i spug-mysql mysql -uroot -pevermodel_ops evermodel_ops < deploy/db/init.defaults.sql
 --
--- 幂等，可重复执行。db/init.sh 会在建表后自动跑这个文件。
+-- 幂等，可重复执行。**必须在 `manage.py updatedb` 之后手工执行**（见 deploy/db/README.md）。
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------

@@ -1,15 +1,16 @@
 # ============================================================================
-# Evermodel Ops — 数据层与网关（单文件，放在仓库根目录）
+# Evermodel Ops — 数据层与网关（单文件，位于 deploy/）
 #
 #   mysql  mariadb 10.8   库 evermodel_ops，账号 root / evermodel_ops
 #   redis  7-alpine      业务队列 + WebSocket channel layer（务必 AOF 持久化）
 #   nginx  alpine        前端静态文件 + /api 反代到宿主机上的后端
 #
 #   后端 5 个进程**不在**本文件里：它们在宿主机 venv 中由 supervisor 托管
-#   （见 deploy/supervisor/README.md）。这样做是为了便于二开调试，
+#   （见 supervisor/README.md）。这样做是为了便于二开调试，
 #   也避免把 SSH 私钥塞进容器。
 #
-# 用法：
+# 用法（先 cd 到本目录，这样 .env 与相对路径都按本目录解析）：
+#   cd deploy
 #   cp .env.example .env        # 生产环境务必改密码
 #   docker compose up -d
 #   docker compose ps
@@ -19,8 +20,8 @@
 #   6379  redis
 #   80    nginx
 #
-# ⚠️ 不要与 deploy/local/docker-compose.yml 同时启动 —— 容器名与端口相同，
-#    它们是同一套栈的两种形态（本文件=标准形态，deploy/local=本机 Windows 开发形态）。
+# ⚠️ 不要与 local/docker-compose.yml 同时启动 —— 容器名与端口相同，
+#    它们是同一套栈的两种形态（本文件=标准形态，local/=本机 Windows 开发形态）。
 # ============================================================================
 name: evermodel_ops
 
@@ -81,9 +82,10 @@ services:
     ports:
       - "${EVERMODEL_NGINX_PORT_MAP:-80}:80"
     volumes:
-      - ./deploy/nginx/evermodel_ops.conf:/etc/nginx/conf.d/default.conf:ro
+      # 站点配置就在同级 nginx/ 目录
+      - ./nginx/evermodel_ops.conf:/etc/nginx/conf.d/default.conf:ro
       # 前端产物：开发机构建好（frontend/BUILD.md）后放进来即可，无需重建容器
-      - ./frontend/build:/usr/share/nginx/html:ro
+      - ../frontend/build:/usr/share/nginx/html:ro
     extra_hosts:
       # 让容器内的 nginx 能访问宿主机上的 gunicorn(9001) / daphne(9002)
       - "host.docker.internal:host-gateway"

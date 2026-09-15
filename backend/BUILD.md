@@ -70,7 +70,7 @@ cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
 
 ## 四、初始化数据库
 
-见 [`db/README.md`](../db/README.md)。一句话版：
+见 [`deploy/db/README.md`](../deploy/db/README.md)（含「建库」那一步，这里只列后两步）。一句话版：
 
 ```bash
 cd backend && source venv/bin/activate
@@ -142,16 +142,24 @@ mkdir -p logs
 python manage.py updatedb
 python manage.py user add -u admin -p evermodel_ops -n 管理员 -s
 
-# 托管（5 个进程 + systemd 守护）
-sudo bash /data/evermodel_ops/deploy/supervisor/install.sh
+# 托管（5 个进程 + systemd 守护）—— 完整 5 步见 deploy/supervisor/README.md 第二节
+APP_DIR=/data/evermodel_ops
+sudo apt install -y supervisor
+sudo mkdir -p "$APP_DIR/backend/logs" /etc/evermodel_ops/conf.d /var/log/evermodel_ops
+sudo install -m 0644 "$APP_DIR/deploy/supervisor/supervisord.conf" /etc/evermodel_ops/supervisord.conf
+sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.conf" \
+  | sudo tee /etc/evermodel_ops/conf.d/evermodel_ops.conf > /dev/null
+sudo install -m 0644 "$APP_DIR/deploy/supervisor/evermodel_ops.service" \
+  /etc/systemd/system/evermodel_ops.service
+sudo systemctl daemon-reload && sudo systemctl enable --now evermodel_ops
 ```
 
 **更新代码**：重新打包 → 解压覆盖 → `sudo supervisorctl restart all`。
 （⚠️ `worker` / `scheduler` 启动时会清空对应 Redis 队列，重启后堆积的任务要**重新提交一次**。）
 
-> ⚠️ **发布包只含 `backend/`**。`deploy/`（supervisor 配置、nginx 配置）、`db/`（初始化脚本）
-> 与 `docker-compose.yaml` 是**仓库级**部署脚手架，不在这两个编译产物里 ——
-> 服务器上要么 `git clone` 拿全，要么把 `deploy/` 与 `db/` 一并上传到 `/data/evermodel_ops/`。
+> ⚠️ **发布包只含 `backend/`**。`deploy/`（compose、db 初始化 SQL、nginx 配置、supervisor 配置）
+> 是**仓库级**部署资产，不在这两个编译产物里 ——
+> 服务器上要么 `git clone` 拿全，要么把 `deploy/` 一并上传到 `/data/evermodel_ops/`。
 
 ## 八、常见问题
 

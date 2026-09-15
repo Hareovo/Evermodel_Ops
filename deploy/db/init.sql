@@ -5,14 +5,14 @@
 -- 幂等，可重复执行。
 --
 -- 用法（容器内执行）：
---     docker exec -i spug-mysql mysql -uroot -pevermodel_ops < db/init.sql
+--     docker exec -i spug-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
 -- 用法（宿主机 mysql 客户端）：
---     mysql -h127.0.0.1 -P3306 -uroot -pevermodel_ops < db/init.sql
+--     mysql -h127.0.0.1 -P3306 -uroot -pevermodel_ops < deploy/db/init.sql
 --
--- 通常不用手工跑这个文件 —— `db/init.sh` 会把「建库 → 建表 → 建管理员 → 写默认设置」
--- 串起来一次做完，优先用那个。
+-- 本目录只有 SQL、没有脚本：初始化按 README.md 第一节的四步手工执行
+-- （① 建库 → ② 建表 → ③ 建管理员 → ④ 写默认设置）。
 --
--- ⚠️ 用根目录 `docker-compose.yaml` 启动 MariaDB 时，镜像的 entrypoint 在**首次初始化
+-- ⚠️ 用 `deploy/docker-compose.yaml` 启动 MariaDB 时，镜像的 entrypoint 在**首次初始化
 --    数据卷**时就会按 MYSQL_DATABASE / MYSQL_ROOT_PASSWORD / MYSQL_ROOT_HOST 自动把库和
 --    root@'%' 建好，那种场景下本文件是多余的（重复执行无害）。
 --    它主要服务于：已有实例、手工安装、重置数据卷后重建。
@@ -61,4 +61,4 @@ SELECT User AS `账号`, Host AS `允许来源`, plugin AS `认证插件`
 FROM mysql.user
 WHERE User = 'root';
 
-SELECT '建库完成，接着执行 db/init.sh（或手工跑 manage.py updatedb）' AS `下一步`;
+SELECT '建库完成，接着手工建表：manage.py updatedb（见 deploy/db/README.md）' AS `下一步`;
