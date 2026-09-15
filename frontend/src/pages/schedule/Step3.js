@@ -94,7 +94,7 @@ export default observer(function (props) {
             </React.Fragment>
           ))}
         </Form.Item>
-        <Form.Item extra={t('本机即Spug服务运行所在的容器或主机。')}>
+        <Form.Item extra={t('本机即Evermodel Ops服务运行所在的容器或主机。')}>
           <HostSelector value={S.targets.filter(x => x !== 'local')} onChange={handleChange}>
             <Button type="dashed" style={{width: 'calc(100% - 40px)'}} disabled={S.trigger === 'monitor'}>
               <PlusOutlined/>{t('添加执行对象')}

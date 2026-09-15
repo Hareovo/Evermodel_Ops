@@ -108,7 +108,7 @@ const dict = {
   '请下载使用该模板填充数据后导入': 'Download the template, fill in your data, then import it.',
   '主机导入模板.xlsx': 'host-import-template.xlsx',
   '导入数据': 'Data file',
-  'Spug使用密钥认证连接服务器，导入或输入的密码仅作首次验证使用，不会存储。': 'Evermodel Ops connects to servers with SSH key authentication. Imported or entered passwords are only used for first-time verification and are never stored.',
+  'Evermodel Ops使用密钥认证连接服务器，导入或输入的密码仅作首次验证使用，不会存储。': 'Evermodel Ops connects to servers with SSH key authentication. Imported or entered passwords are only used for first-time verification and are never stored.',
   '导入主机': 'Import Hosts',
   '导入结果': 'Import Results',
   '成功：': 'Succeeded: ',

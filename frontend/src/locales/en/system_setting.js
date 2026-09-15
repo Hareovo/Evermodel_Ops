@@ -39,7 +39,7 @@ const dict = {
   '修改密钥对需要': 'Changes to the key pair ',
   '重启服务后生效': 'take effect after the service is restarted',
   '，已添加的主机可能需要重新进行编辑验证后才可以正常连接。': ', and hosts already added may need to be edited and re-verified before they can connect again.',
-  '在这里你可以上传并使用已有的密钥对，没有上传密钥的情况下，Spug会在首次添加主机时自动生成密钥对。': 'You can upload an existing key pair here. If none is uploaded, Evermodel Ops will generate one automatically when the first host is added.',
+  '在这里你可以上传并使用已有的密钥对，没有上传密钥的情况下，Evermodel Ops会在首次添加主机时自动生成密钥对。': 'You can upload an existing key pair here. If none is uploaded, Evermodel Ops will generate one automatically when the first host is added.',
   '公钥': 'Public Key',
   '一般位于 ~/.ssh/id_rsa.pub': 'Usually located at ~/.ssh/id_rsa.pub',
   '请输入公钥': 'Enter the public key',

@@ -49,7 +49,7 @@ export default observer(function () {
         type="info"
         style={{width: 650}}
         message={t('小提示')}
-        description={t('在这里你可以上传并使用已有的密钥对，没有上传密钥的情况下，Spug会在首次添加主机时自动生成密钥对。')}
+        description={t('在这里你可以上传并使用已有的密钥对，没有上传密钥的情况下，Evermodel Ops会在首次添加主机时自动生成密钥对。')}
       />
       <Form layout="vertical" style={{maxWidth: 650, marginTop: 12}}>
         <Form.Item label={t('公钥')} extra={t('一般位于 ~/.ssh/id_rsa.pub')}>
