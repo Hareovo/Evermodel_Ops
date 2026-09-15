@@ -32,6 +32,34 @@ deploy/
 
 ---
 
+## 〇、服务器依赖（只装一次）
+
+目标系统 Ubuntu 20.04 / 22.04 / 24.04（x86_64），其余发行版包名同理。
+
+```bash
+sudo apt update
+# python 编译环境（mysqlclient 需要编译）+ supervisor + 主机管理 / 监控依赖
+sudo apt install -y python3 python3-venv python3-dev gcc pkg-config \
+    default-libmysqlclient-dev libssl-dev \
+    supervisor nginx git curl \
+    sshpass rsync sshfs iputils-ping net-tools procps
+```
+
+| 包 | 少了会怎样 |
+|---|---|
+| `python3-dev` `gcc` `pkg-config` `default-libmysqlclient-dev` `libssl-dev` | 编译 `mysqlclient` 报 `mysql.h: No such file` |
+| `sshpass` `rsync` `sshfs` | 主机管理、文件分发功能不可用 |
+| `iputils-ping` | Ping 类监控检测不可用 |
+
+Node **不需要**装在服务器上（前端在开发机打包后上传，见步骤 ④）。
+
+装 Docker（跑数据库与 Redis 用，已有实例可跳过）：
+
+```bash
+curl -fsSL https://get.docker.com | sudo sh
+sudo systemctl enable --now docker
+```
+
 ## 一、部署顺序（4 步）
 
 以 `/data/evermodel_ops` 为例。每步的完整命令在对应文档里，这里只给主干。
@@ -98,7 +126,7 @@ nginx:80 ──┬── /api/ws/  ──> :9002
 |---|---|
 | 应用代码 | `backend/`（Django）、`frontend/`（React） |
 | 部署资产（本目录） | `deploy/` |
-| 架构说明与二开改动记录 | `docs/` |
+| 架构说明与二开改动记录 | 本地 `docs/` 目录（**已在 `.gitignore` 中，不入库**） |
 
 > `local/` 是本机 Windows 开发形态，与 `docker-compose.yaml` **容器名和端口完全相同** ——
 > 同一套栈的两种形态，**不要同时启动**，详见 [`local/README.md`](local/README.md)。

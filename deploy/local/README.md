@@ -54,7 +54,7 @@ cd D:\Code\evermodel_ops\backend
 
 ⚠️ **只跑 ② 不跑 ③ = 页面能建任务但永远不执行、不告警。** 三个进程都不在后端进程里。
 `runserver` 自带热重载，改 Python 代码无需手动重启；但**改被多个进程读取的配置（如告警署名）
-要连同 ③ 的三个进程一起重启**。排查手法见 `docs/LOCAL_DEV_GUIDE.md` 第五节。
+要连同 ③ 的三个进程一起重启**。完整排查手法见本地 `docs/LOCAL_DEV_GUIDE.md` 第五节（该目录不入库）。
 
 ## ⚠️ 不要与 deploy/docker-compose.yaml 同时启动
 
@@ -80,7 +80,8 @@ cd D:\Code\evermodel_ops\backend
 
 ## 相关文档
 
-- 本地操作手册（启动顺序、健康检查、故障速查）：`docs/LOCAL_DEV_GUIDE.md`
-- 二开改动全清单（改过哪些文件、为什么）：`docs/FILE_CHANGES.md`
 - 生产部署总览：`deploy/README.md`
 - 生产进程托管与逐服务启停命令：`deploy/supervisor/README.md`
+
+> 另有本地文档（**不入库，clone 看不到**）：`docs/LOCAL_DEV_GUIDE.md`（启动顺序、健康检查、故障速查）、
+> `docs/FILE_CHANGES.md`（二开改动全清单）、`docs/ARCHITECTURE_UNDERSTANDING.md`（源码分层）。
