@@ -1,0 +1,33 @@
+/**
+ * Evermodel Ops
+ * Copyright (c) OpenSpug Organization. <spug.dev@gmail.com>
+ * Released under the AGPL-3.0 License.
+ */
+import React from 'react';
+import { observer } from 'mobx-react';
+import { Input } from 'antd';
+import { SearchForm, Breadcrumb } from 'components';
+import { t } from 'libs';
+import ComTable from './Table';
+import store from './store';
+
+export default observer(function () {
+  return (
+    <div>
+      <Breadcrumb>
+        <Breadcrumb.Item>{t('首页')}</Breadcrumb.Item>
+        <Breadcrumb.Item>{t('系统管理')}</Breadcrumb.Item>
+        <Breadcrumb.Item>{t('登录日志')}</Breadcrumb.Item>
+      </Breadcrumb>
+      <SearchForm>
+        <SearchForm.Item span={8} title={t('账户名称')}>
+          <Input allowClear value={store.f_name} onChange={e => store.f_name = e.target.value} placeholder={t('请输入')}/>
+        </SearchForm.Item>
+        <SearchForm.Item span={8} title={t('登录IP')}>
+          <Input allowClear value={store.f_ip} onChange={e => store.f_ip = e.target.value} placeholder={t('请输入')}/>
+        </SearchForm.Item>
+      </SearchForm>
+      <ComTable/>
+    </div>
+  )
+})

@@ -1,0 +1,192 @@
+.searchForm {
+  padding: 24px 24px 0 24px;
+  background-color: #fff;
+  border-radius: 2px;
+  margin-bottom: 16px;
+
+  // 注意：这里原先为 antd v3 写过 `.ant-form-item{display:flex}` 和
+  // `.ant-form-item-control-wrapper{flex:1}`，两者在 antd v4 下都是错的，切勿加回：
+  //   1. v4 的 Form.Item 内部结构是 .ant-form-item > .ant-form-item-row(.ant-row) >
+  //      label + control，横向布局由中间那层 .ant-row 负责。给外层 .ant-form-item
+  //      加 display:flex 会把 .ant-form-item-row 降级成收缩宽度的 flex item，
+  //      于是 label+control 只占内容宽，Select 这类没有固有宽度的控件会被压扁成几十像素
+  //      （Input 因为有固有宽度所以看着正常，问题不易察觉）。
+  //   2. v4 已没有 .ant-form-item-control-wrapper 节点，该规则是死代码；
+  //      control 的 flex:1 由 antd 自带的 .ant-form-horizontal 规则提供。
+  // 这里只保留字体标签间距与溢出裁切两项必要样式。
+  :global(.ant-form-item-label) {
+    padding-right: 8px;
+  }
+
+  :global(.ant-form-item-control) {
+    overflow: hidden;
+  }
+}
+
+.statisticsCard {
+  position: relative;
+  text-align: center;
+
+  span {
+    color: rgba(0, 0, 0, .45);
+    display: inline-block;
+    line-height: 22px;
+    margin-bottom: 4px;
+  }
+
+  p {
+    font-size: 32px;
+    line-height: 32px;
+    margin: 0;
+  }
+
+  em {
+    background-color: #e8e8e8;
+    position: absolute;
+    height: 56px;
+    width: 1px;
+    top: 0;
+    right: 0;
+  }
+}
+
+.tableCard {
+  border: 1px solid #f0f0f0;
+  background: #fff;
+  border-radius: 2px;
+  padding: 24px;
+
+  :global(.ant-pagination) {
+    margin-bottom: 0;
+  }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+
+    .title {
+      flex: 1;
+      font-weight: 500;
+      font-size: 16px;
+      opacity: 0.8;
+      margin-right: 24px;
+    }
+
+    .option {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+
+      .icons {
+        :global(.anticon) {
+          font-size: 16px;
+          margin-left: 8px;
+        }
+      }
+    }
+  }
+}
+
+.tableFields {
+  :global(.ant-popover-title) {
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  :global(.ant-popover-inner-content) {
+    padding: 8px 0;
+
+    :global(.ant-checkbox-group) {
+      display: flex;
+      flex-direction: column;
+    }
+
+    :global(.ant-checkbox-wrapper) {
+      height: 30px;
+      line-height: 30px;
+      margin: 0;
+      padding: 0 16px;
+    }
+
+    :global(.ant-checkbox-wrapper):hover {
+      background: rgba(0, 0, 0, 0.025)
+    }
+  }
+}
+
+.tableFooter {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  width: calc(100% - 208px);
+  padding: 0 24px;
+  background: #fff;
+
+  .left {
+    flex: 1;
+
+    span {
+      color: #1890ff;
+      font-weight: 600;
+    }
+  }
+}
+
+.breadcrumb {
+  margin: -24px -24px 24px -24px;
+  padding: 16px 24px;
+  background: #fff;
+  border-bottom: 1px solid #e8e8e8;
+
+  .title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 20px;
+    margin-top: 8px;
+  }
+}
+
+.notFound {
+  display: flex;
+  height: 80%;
+  align-items: center;
+
+  .imgBlock {
+    flex: 0 0 62.5%;
+    width: 62.5%;
+    zoom: 1;
+    padding-right: 88px;
+
+    .img {
+      float: right;
+      height: 360px;
+      width: 100%;
+      max-width: 430px;
+      background-size: contain;
+      background: url('./404.svg') no-repeat 50% 50%;
+    }
+  }
+
+  .title {
+    color: #434e59;
+    font-size: 72px;
+    font-weight: 600;
+    line-height: 72px;
+    margin-bottom: 24px;
+  }
+
+  .desc {
+    color: rgba(0, 0, 0, .45);
+    font-size: 20px;
+    line-height: 28px;
+    margin-bottom: 16px;
+  }
+}

@@ -1,0 +1,539 @@
+/* 登录页 —— 左侧交互动画角色 + 右侧表单
+   动画角色参考开源项目 animatedlogin 的设计改写而来 */
+
+.page {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+/* ============ 左侧面板 ============ */
+.left {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 40px 48px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #d4d0dc 0%, #c8c4d0 50%, #bbb7c5 100%);
+}
+
+/* 装饰性光斑 */
+.left::before {
+    content: "";
+    position: absolute;
+    bottom: 15%;
+    left: 10%;
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    background: rgba(200, 195, 210, 0.2);
+    filter: blur(100px);
+}
+
+.left::after {
+    content: "";
+    position: absolute;
+    top: 20%;
+    right: 15%;
+    width: 260px;
+    height: 260px;
+    border-radius: 50%;
+    background: rgba(180, 170, 200, 0.25);
+    filter: blur(80px);
+}
+
+.brand {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.brandBlock {
+    position: relative;
+    z-index: 10;
+}
+
+.tagline {
+    margin-top: 10px;
+    font-size: 13px;
+    color: rgba(70, 60, 82, 0.75);
+}
+
+.brandLogo {
+    height: 28px;
+}
+
+.leftFooter {
+    position: relative;
+    z-index: 10;
+    font-size: 13px;
+    color: rgba(70, 60, 82, 0.7);
+}
+
+.sceneWrap {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 420px;
+}
+
+/* ============ 动画角色 ============ */
+.scene {
+    position: relative;
+    width: 480px;
+    height: 360px;
+    transform-origin: bottom center;
+}
+
+.character {
+    position: absolute;
+    bottom: 0;
+    transition: all 0.7s ease-in-out;
+    transform-origin: bottom center;
+}
+
+.purple {
+    left: 60px;
+    width: 170px;
+    height: 370px;
+    z-index: 1;
+    background: #6c3ff5;
+    border-radius: 10px 10px 0 0;
+}
+
+.black {
+    left: 220px;
+    width: 115px;
+    height: 290px;
+    z-index: 2;
+    background: #2d2d2d;
+    border-radius: 8px 8px 0 0;
+}
+
+.orange {
+    left: 0;
+    width: 230px;
+    height: 190px;
+    z-index: 3;
+    background: #ff9b6b;
+    border-radius: 115px 115px 0 0;
+}
+
+.yellow {
+    left: 290px;
+    width: 135px;
+    height: 215px;
+    z-index: 4;
+    background: #e8d754;
+    border-radius: 68px 68px 0 0;
+}
+
+/* 眼睛容器（位置由 JS 动态改写） */
+.eyes {
+    position: absolute;
+    display: flex;
+    transition: all 0.7s ease-in-out;
+}
+
+/* 白色眼球（内含瞳孔） */
+.eyeball {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #fff;
+    overflow: hidden;
+    transition: height 0.15s ease;
+}
+
+/* 眼球上的瞳孔 */
+.pupil {
+    border-radius: 50%;
+    background: #2d2d2d;
+    transition: transform 0.1s ease-out;
+}
+
+/* 直接贴在身体上的瞳孔（橙色、黄色角色） */
+.barePupil {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #2d2d2d;
+    transition: transform 0.7s ease-in-out;
+}
+
+/* 黄色角色的嘴 */
+.yellowMouth {
+    position: absolute;
+    left: 40px;
+    top: 88px;
+    width: 50px;
+    height: 4px;
+    border-radius: 2px;
+    background: #2d2d2d;
+    transition: all 0.7s ease-in-out;
+}
+
+/* 橙色角色的嘴（登录失败时才出现） */
+.orangeMouth {
+    position: absolute;
+    left: 90px;
+    top: 120px;
+    width: 28px;
+    height: 14px;
+    border: 3px solid #2d2d2d;
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+    opacity: 0;
+    transition: all 0.7s ease-in-out;
+}
+
+.orangeMouthVisible {
+    opacity: 1;
+}
+
+/* 各角色五官初始位置 */
+.purpleEyes {
+    left: 45px;
+    top: 40px;
+    gap: 28px;
+}
+
+.purpleEye {
+    width: 18px;
+    height: 18px;
+}
+
+.purplePupil {
+    width: 7px;
+    height: 7px;
+}
+
+.blackEyes {
+    left: 26px;
+    top: 32px;
+    gap: 20px;
+}
+
+.blackEye {
+    width: 16px;
+    height: 16px;
+}
+
+.blackPupil {
+    width: 6px;
+    height: 6px;
+}
+
+.orangeEyes {
+    left: 82px;
+    top: 90px;
+    gap: 28px;
+}
+
+.yellowEyes {
+    left: 52px;
+    top: 40px;
+    gap: 20px;
+}
+
+/* 登录失败时的摇头动画 */
+@keyframes shakeHead {
+    0%, 100% {
+        translate: 0 0;
+    }
+    10% {
+        translate: -9px 0;
+    }
+    20% {
+        translate: 7px 0;
+    }
+    30% {
+        translate: -6px 0;
+    }
+    40% {
+        translate: 5px 0;
+    }
+    50% {
+        translate: -4px 0;
+    }
+    60% {
+        translate: 3px 0;
+    }
+    70% {
+        translate: -2px 0;
+    }
+    80% {
+        translate: 1px 0;
+    }
+    90% {
+        translate: -0.5px 0;
+    }
+}
+
+.shakeHead {
+    animation: shakeHead 0.8s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* ============ 右侧面板 ============ */
+.right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    overflow-y: auto;
+    background: #fff;
+}
+
+.language {
+    position: absolute;
+    top: 12px;
+    right: 24px;
+    color: rgba(0, 0, 0, 0.65);
+}
+
+.formWrap {
+    width: 100%;
+    max-width: 380px;
+}
+
+.mobileBrand {
+    display: none;
+}
+
+.sparkle {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.sparkle svg {
+    width: 32px;
+    height: 32px;
+}
+
+.header {
+    margin-bottom: 32px;
+    text-align: center;
+}
+
+.header h1 {
+    margin-bottom: 6px;
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #1a1a2e;
+}
+
+.header p {
+    font-size: 14px;
+    color: #888;
+}
+
+.field {
+    margin-bottom: 18px;
+}
+
+.label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+}
+
+.labelError {
+    color: #dc2626;
+}
+
+.inputWrapper {
+    position: relative;
+}
+
+.input {
+    width: 100%;
+    height: 46px;
+    padding: 0 40px 0 0;
+    border: none;
+    border-bottom: 1.5px solid #e0e0e0;
+    background: transparent;
+    font-size: 15px;
+    font-family: inherit;
+    color: #1a1a2e;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.input:focus {
+    border-bottom-color: #5b21b6;
+}
+
+.input::placeholder {
+    color: #ccc;
+}
+
+.input.inputError {
+    border-bottom-color: #dc2626;
+}
+
+.togglePassword {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 6px;
+    border: none;
+    background: none;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.togglePassword:hover {
+    color: #333;
+}
+
+.errorMsg {
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    border-radius: 10px;
+    background: rgba(220, 38, 38, 0.08);
+    font-size: 13px;
+    color: #dc2626;
+}
+
+/* 登录按钮：悬停时文字滑出、紫色背景与箭头滑入 */
+.button {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 50px;
+    margin-top: 8px;
+    padding: 0;
+    border: 1.5px solid #1a1a2e;
+    border-radius: 25px;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.button .btnText {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s;
+}
+
+.button .btnHoverContent {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 25px;
+    background: #5b21b6;
+    color: #fff;
+    opacity: 0;
+    transition: all 0.3s;
+}
+
+.button:not(:disabled):hover .btnText {
+    transform: translateX(40px);
+    opacity: 0;
+}
+
+.button:not(:disabled):hover .btnHoverContent {
+    opacity: 1;
+}
+
+.button:disabled {
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+.mobileFooter {
+    display: none;
+    margin-top: 28px;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.45);
+    text-align: center;
+}
+
+.tips {
+    top: 230px;
+}
+
+/* ============ 响应式 ============ */
+@media (max-width: 1200px) {
+    .left {
+        padding: 32px;
+    }
+
+    .scene {
+        transform: scale(0.85);
+    }
+}
+
+@media (max-width: 1024px) {
+    .scene {
+        transform: scale(0.7);
+    }
+}
+
+@media (max-width: 900px) {
+    .page {
+        grid-template-columns: 1fr;
+    }
+
+    .left {
+        display: none;
+    }
+
+    .right {
+        padding: 24px;
+    }
+
+    .formWrap {
+        max-width: 400px;
+    }
+
+    .mobileBrand {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 28px;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1a1a2e;
+    }
+
+    .mobileBrand img {
+        height: 30px;
+    }
+
+    .mobileFooter {
+        display: block;
+    }
+}

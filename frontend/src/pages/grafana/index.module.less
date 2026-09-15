@@ -1,0 +1,89 @@
+/**
+ * Evermodel Ops
+ * Copyright (c) OpenSpug Organization. <spug.dev@gmail.com>
+ * Released under the AGPL-3.0 License.
+ */
+
+/* 页面根节点直接作为 Content(flex column) 的子项，靠 flex:1 + min-height:0 把剩余高度吃满，
+   这样 iframe 才能自适应，而不是靠 calc(100vh - Npx) 这种一改布局就失效的硬编码。 */
+.page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin-bottom: 24px;
+}
+
+.alertWrap {
+  margin-bottom: 12px;
+}
+
+.ini {
+  margin: 8px 0 4px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 2px;
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 420px;
+}
+
+.tabsWrap {
+  flex: none;
+  padding: 0 16px;
+  background: #fff;
+  border-radius: 2px;
+}
+
+/* antd 4 的 Tabs 默认给导航条 16px 的下外边距，这里收掉，间距统一交给 .frameWrap */
+.tabsWrap :global(.ant-tabs-bar),
+.tabsWrap :global(.ant-tabs-nav) {
+  margin-bottom: 0;
+}
+
+.label {
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.frameWrap {
+  position: relative;
+  flex: 1;
+  /* 兜底高度：万一外层 flex 链断了也不会塌成 0 */
+  min-height: 420px;
+  margin-top: 12px;
+  background: #fff;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.mask {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #fff;
+}
+
+.maskText {
+  margin-top: 12px;
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.empty {
+  padding: 24px;
+}

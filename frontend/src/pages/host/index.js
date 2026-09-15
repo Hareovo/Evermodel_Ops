@@ -1,0 +1,62 @@
+/**
+ * Evermodel Ops
+ * Copyright (c) OpenSpug Organization. <spug.dev@gmail.com>
+ * Released under the AGPL-3.0 License.
+ */
+import React, { useEffect } from 'react';
+import { observer } from 'mobx-react';
+import { Row, Col, Button } from 'antd';
+import { CodeOutlined } from '@ant-design/icons';
+import { Breadcrumb } from 'components';
+import { t } from 'libs';
+import Group from './Group';
+import ComTable from './Table';
+import ComForm from './Form';
+import ComImport from './Import';
+import CloudImport from './CloudImport';
+import BatchSync from './BatchSync';
+import Detail from './Detail';
+import Selector from './Selector';
+import store from './store';
+
+export default observer(function () {
+  useEffect(() => {
+    store.initial()
+  }, [])
+
+  function openTerminal() {
+    window.open('/ssh')
+  }
+
+  return (
+    <div>
+      <Breadcrumb extra={<Button type="primary" icon={<CodeOutlined/>}
+                                     onClick={openTerminal}>{t('Web 终端')}</Button>}>
+        <Breadcrumb.Item>{t('首页')}</Breadcrumb.Item>
+        <Breadcrumb.Item>{t('主机管理')}</Breadcrumb.Item>
+      </Breadcrumb>
+
+      <Row gutter={12}>
+        <Col span={6}>
+          <Group/>
+        </Col>
+        <Col span={18}>
+          <ComTable/>
+        </Col>
+      </Row>
+
+      <Detail/>
+      {store.formVisible && <ComForm/>}
+      {store.importVisible && <ComImport/>}
+      {store.cloudImport && <CloudImport/>}
+      {store.syncVisible && <BatchSync/>}
+      {store.selectorVisible &&
+        <Selector
+          mode="group"
+          onlySelf={!store.addByCopy}
+          onCancel={() => store.selectorVisible = false}
+          onChange={store.updateGroup}
+        />}
+    </div>
+  );
+})

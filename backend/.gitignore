@@ -1,0 +1,15 @@
+*.pyc
+/venv/
+__pycache__/
+/.idea/
+/db.sqlite3
+migrations/
+# 本地/部署环境覆盖配置（按环境生成，不入库）
+evermodel_ops/overrides.py
+/access.log
+/repos/*
+/logs/*
+/storage/deploy/*
+/storage/transfer/*
+!/storage/deploy/.gitkeep
+!/storage/transfer/.gitkeep

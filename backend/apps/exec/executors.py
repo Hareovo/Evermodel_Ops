@@ -1,0 +1,77 @@
+# Evermodel Ops
+# Copyright (c) OpenSpug Organization. <spug.dev@gmail.com>
+# Released under the AGPL-3.0 License.
+from django_redis import get_redis_connection
+from libs.utils import human_seconds_time, wrap_python_command
+from libs.ssh import SSH
+from libs.locale import translate_console
+import threading
+import socket
+import json
+import time
+
+
+def exec_worker_handler(job):
+    job = Job(**json.loads(job))
+    threading.Thread(target=job.run).start()
+
+
+class Job:
+    def __init__(self, token, key, name, hostname, port, username, pkey, command, interpreter, params=None,
+                 term=None, language='zh'):
+        self.ssh = SSH(hostname, port, username, pkey, term=term)
+        self.key = key
+        self.command = self._handle_command(command, interpreter)
+        self.token = token
+        self.rds = get_redis_connection()
+        self.rds_key = f'PID:{self.token}:{self.key}'
+        # 发起执行的用户界面语言，仅用于翻译 Evermodel Ops 自身产生的提示，命令输出原样透传
+        self.language = language
+        self.env = dict(
+            EVERMODEL_HOST_ID=str(self.key),
+            EVERMODEL_HOST_NAME=name,
+            EVERMODEL_HOST_HOSTNAME=hostname,
+            EVERMODEL_SSH_PORT=str(port),
+            EVERMODEL_SSH_USERNAME=username,
+            EVERMODEL_INTERPRETER=interpreter
+        )
+        if isinstance(params, dict):
+            self.env.update({f'_EVERMODEL_{k}': str(v) for k, v in params.items()})
+
+    def _send(self, message):
+        self.rds.publish(self.token, json.dumps(message))
+
+    def _handle_command(self, command, interpreter):
+        if interpreter == 'python':
+            return wrap_python_command(command)
+        return command
+
+    def send(self, data):
+        self._send({'key': self.key, 'data': data})
+
+    def send_status(self, code):
+        self._send({'key': self.key, 'status': code})
+
+    def run(self):
+        flag = time.time()
+        self.send('\r\n\x1b[36m### Executing ...\x1b[0m\r\n')
+        code = -1
+        try:
+            with self.ssh:
+                pid = self.ssh.get_pid()
+                if pid:
+                    self.rds.set(self.rds_key, pid, 3600)
+                for code, out in self.ssh.exec_command_with_stream(self.command, self.env):
+                    self.send(out)
+            human_time = human_seconds_time(time.time() - flag)
+            self.send(translate_console(f'\r\n\x1b[36m** 执行结束，耗时：{human_time} **\x1b[0m', self.language))
+        except socket.timeout:
+            code = 130
+            self.send('\r\n\x1b[31m### Time out\x1b[0m')
+        except Exception as e:
+            code = 131
+            self.send(f'\r\n\x1b[31m### Exception {e}\x1b[0m')
+            raise e
+        finally:
+            self.rds.delete(self.rds_key)
+            self.send_status(code)
