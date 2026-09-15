@@ -166,7 +166,8 @@ sudo docker compose ps
 
 ### 3. 部署后端
 
-**上传代码**（排除 venv / repos / logs / storage —— venv 不能跨平台复用）：
+**上传代码**（排除 venv / repos / logs / storage —— venv 不能跨平台复用，
+`logs` / `storage` 是运行时目录，服务器上在第 4 步创建）：
 
 ```bash
 # 开发机
@@ -221,7 +222,29 @@ python manage.py user add -u admin -p '你的密码' -n 管理员 -s    # -s = �
 
 ### 4. 进程托管（supervisor）
 
-仓库自带的 `backend/tools/supervisor-evermodel.ini` 路径已写死 `/data/evermodel_ops`，直接启用：
+后端不是单个进程，而是 **1 个 REST API + 1 个 WebSocket + 3 个异步执行器 = 5 个常驻进程**。
+仓库自带 `backend/tools/supervisor-evermodel.ini`（路径写死 `/data/evermodel_ops`），
+它调用同目录下的 `start-*.sh`，各进程实际执行的命令是：
+
+| supervisor 程序 | 实际执行的命令 | 作用 |
+|---|---|---|
+| `evermodel_ops-api` | `gunicorn -b 127.0.0.1:9001 -w 2 --threads 8 --access-logfile - evermodel_ops.wsgi` | REST API |
+| `evermodel_ops-ws` | `daphne -p 9002 evermodel_ops.asgi:application` | WebSocket（主机终端、批量执行实时输出） |
+| `evermodel_ops-worker` | `python manage.py runworker` | 批量执行 / 任务计划 / 监控的执行器 |
+| `evermodel_ops-monitor` | `python manage.py runmonitor` | 监控检测 |
+| `evermodel_ops-scheduler` | `python manage.py runscheduler` | 任务计划调度 |
+
+> 5 个脚本都会自行 `cd` 到 `backend/` 并 `source venv/bin/activate`，
+> 所以 ini 里不需要再配 `directory` 或 `environment`；日志由 supervisor 重定向到 `backend/logs/*.log`。
+> **只跑 `api` 不跑另外 4 个** → 平台能用，但批量执行会卡在 `Waiting for scheduling`、监控和任务计划完全不执行。
+
+**① 先建日志目录**（该目录不入库，缺了 5 个进程会全部启动失败）：
+
+```bash
+sudo mkdir -p /data/evermodel_ops/backend/logs
+```
+
+**② 启用**：
 
 ```bash
 sudo cp /data/evermodel_ops/backend/tools/supervisor-evermodel.ini \
@@ -230,8 +253,13 @@ sudo supervisorctl reread && sudo supervisorctl update
 sudo supervisorctl status
 ```
 
-期望五个进程全部 `RUNNING`。日志在 `/data/evermodel_ops/backend/logs/`。
+期望五个进程全部 `RUNNING`，日志在 `/data/evermodel_ops/backend/logs/`。
 
+> ⚠️ 若 `status` 显示 `FATAL` / `BACKOFF` 或 `ERROR (spawn error)`，
+> 多数是第 ① 步的 `backend/logs/` 没建 —— supervisor 打不开 `stdout_logfile` 就会 spawn 失败。
+> `sudo mkdir -p /data/evermodel_ops/backend/logs && sudo supervisorctl restart all` 即可；
+> 具体原因看 `sudo tail -30 /var/log/supervisor/supervisord.log`。
+>
 > ⚠️ `worker` / `scheduler` 启动时会清空对应 Redis 队列（防止旧任务乱跑），
 > 因此重启后需要**重新提交一次**堆积的任务。
 
@@ -353,6 +381,7 @@ tail -f /data/evermodel_ops/backend/logs/api.log
 | 现象 | 原因 | 处理 |
 |---|---|---|
 | 页面 502 | gunicorn / daphne 没起 | `supervisorctl status`；看 `logs/api.log` |
+| `supervisorctl status` 显示 5 个进程全 `FATAL` / `spawn error` | `backend/logs/` 目录不存在（`stdout_logfile` 打不开），该目录不入库 | `sudo mkdir -p /data/evermodel_ops/backend/logs && sudo supervisorctl restart all` |
 | 页面 404 / 空白 | 前端产物没上传到位 | 确认 `/data/evermodel_ops/frontend/build/index.html` 存在 |
 | 接口 400 DisallowedHost | `ALLOWED_HOSTS` 没配 / Host 未透传 | 改 `overrides.py`；确认 nginx `proxy_set_header Host $host` |
 | pip 装 mysqlclient 报 `mysql.h: No such file` | 缺编译依赖 | 装 `gcc pkg-config default-libmysqlclient-dev libssl-dev python3-dev` |

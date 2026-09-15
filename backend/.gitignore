@@ -9,7 +9,6 @@ evermodel_ops/overrides.py
 /access.log
 /repos/*
 /logs/*
-/storage/deploy/*
+!/logs/.gitkeep
 /storage/transfer/*
-!/storage/deploy/.gitkeep
 !/storage/transfer/.gitkeep

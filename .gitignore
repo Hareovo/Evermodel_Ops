@@ -28,12 +28,14 @@ __pycache__/
 # ---- WorkBuddy 项目数据：工作记忆、改动备份、临时脚本 ----
 .workbuddy/
 
-# ---- 运行时产物 ----
-backend/logs/
-backend/repos/
-backend/storage/deploy/
-backend/storage/transfer/
-!backend/storage/deploy/.gitkeep
+# ---- 运行时产物（只忽略内容，保留目录本身）----
+# ⚠️ 不能用 `backend/logs/` 这种写法：那样连 `.gitkeep` 一起忽略，而 git 无法反排除
+#    一个已被忽略目录里的文件 → 目录不会入库 → supervisor 的 stdout_logfile 打不开，
+#    5 个进程全部 spawn error。
+backend/logs/*
+!backend/logs/.gitkeep
+backend/repos/*
+backend/storage/transfer/*
 !backend/storage/transfer/.gitkeep
 backend/access.log
 backend/db.sqlite3
