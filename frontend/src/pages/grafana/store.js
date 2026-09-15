@@ -47,7 +47,10 @@ class Store {
   @computed get activeUrl() {
     const current = this.dashboards.find(x => x.uid === this.activeKey);
     if (!this.url || !current) return '';
-    const params = ['kiosk', `theme=${this.theme}`];
+    // hideLogo=1：Grafana 12.4 起 kiosk 模式会在视口底部叠一条「Powered by Grafana」白底署名，
+    // 它会盖住该位置上面板的标题（看板看起来像丢了一行文字）。这个参数是官方给的关闭开关；
+    // 低版本 Grafana 不认这个参数、会直接忽略，所以无需判断版本。
+    const params = ['kiosk', 'hideLogo=1', `theme=${this.theme}`];
     if (this.refresh) params.push(`refresh=${this.refresh}`);
     const sep = current.path.includes('?') ? '&' : '?';
     return `${this.url}${current.path}${sep}${params.join('&')}`

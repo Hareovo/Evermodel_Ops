@@ -401,6 +401,7 @@ tail -f /data/evermodel_ops/backend/logs/api.log
 |---|---|---|
 | iframe 一片空白 | Grafana 发了 `X-Frame-Options: deny` | `allow_embedding = true` |
 | iframe 里弹出 Grafana 自己的登录页 | 匿名访问没开，iframe 带不上登录态 | `[auth.anonymous] enabled = true` |
+| 看板某一排面板只剩内容、**标题不见了**，且右下方多一行 `Powered by Grafana` | Grafana 12.4+ 在 kiosk（嵌入）模式下会叠一条署名条，白底正好压住该位置的面板标题 | 已由平台处理：iframe URL 里带官方开关 `hideLogo=1`（见 §5） |
 
 ### 1. 平台侧填 Grafana 地址
 
@@ -468,6 +469,19 @@ org_role = Viewer
 > 1. **环境变量优先于 ini** —— 容器里若已有 `GF_AUTH_ANONYMOUS_ENABLED=false`，改 ini 不生效，得改那个变量；
 > 2. **别重复写同名 section** —— Grafana 用的 go-ini 遇到两个 `[auth.anonymous]` 会**直接启动失败**，末尾已有就改它；
 > 3. **别改错文件** —— 真正生效的是 `/etc/grafana/grafana.ini`，`/usr/share/grafana/conf/defaults.ini` 是模板，改了没用。
+
+### 5. 已知现象：kiosk 署名条会压住面板标题
+
+Grafana **12.4 起**，`?kiosk`（嵌入）模式会在视口底部叠一条白底的 `Powered by Grafana` 署名条
+（DOM 上是 `data-testid="public-dashboard-footer"`，链接带 `cnt=kiosk-dashboard`）。
+它是**绝对定位在「第一屏视口底部」的浮层**，不是页脚 —— 因为 iframe 高度（约 500px）远小于看板总高，
+它正好停在中间某一排面板的标题位置，把那排标题整条盖掉，看起来像「看板少了一行文字」。
+
+官方开关：URL 上加 `hideLogo=1`（Grafana 12.4+ 认这个参数，低版本会忽略，因此无需判断版本）。
+平台已经在 `/grafana` 页面的 iframe URL 里带上了，见 `frontend/src/pages/grafana/store.js`。
+
+> 为什么不换 `?kiosk=tv`：实测 `kiosk=tv` 虽然没有署名条，但会把 Grafana 的完整导航
+> （Dashboard 面包屑、搜索框、Sign in）一起放出来，不适合大屏。
 
 ---
 
