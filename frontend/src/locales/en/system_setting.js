@@ -79,8 +79,8 @@ const dict = {
   '服务地址是通的，但看板在嵌入的窗口里会要求登录（iframe 带不上 Grafana 的登录态）。需要在 Grafana 侧放行匿名只读访问：': 'The address is reachable, but the embedded dashboard will ask for a login (an iframe cannot carry the Grafana session). Allow anonymous read-only access in Grafana:',
   '改完重启 Grafana 容器即可，不需要重启本平台。': 'Restart the Grafana container afterwards; this platform does not need a restart.',
   '连接正常，匿名只读已开启': 'Connected, anonymous read-only access is enabled',
-  '共发现 {} 个看板，已自动铺成监控大屏顶部的标签页。': '{} dashboard(s) found — they are laid out as tabs at the top of the wall display.',
-  '打开监控大屏': 'Open Monitoring',
+  '共发现 {} 个看板，已自动铺成监控大屏顶部的标签页。': '{} dashboard(s) found — they are laid out as tabs at the top of the Monitoring Wall.',
+  '打开监控大屏': 'Open Monitoring Wall',
 };
 
 export default dict;

@@ -122,7 +122,7 @@ const base = {
   '模板管理': 'Command Templates',
   '文件分发': 'File Distribution',
   '任务计划': 'Scheduled Tasks',
-  '监控中心': 'Monitoring',
+  '监控中心': 'Monitoring Center',
   '报警中心': 'Alerts',
   '报警历史': 'Alert History',
   '报警联系人': 'Contacts',
