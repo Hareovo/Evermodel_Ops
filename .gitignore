@@ -48,10 +48,11 @@ backend/access.log
 backend/db.sqlite3
 *.sqlite3
 
-# ---- 本地开发形态（deploy/local/）----
-# 脚手架本身入库：别人 clone 下来就能在本机把数据层和三个 job 进程跑起来。
-# 只有口令不入库 —— 上面的 `.env` 规则是「任意层级」匹配，已覆盖 deploy/local/.env。
-deploy/local/.env
+# ---- 本地开发形态（deploy/local/，不入库）----
+# 这是「本机 Windows + Docker Desktop」的私有开发形态：数据层端口、启动 bat、本机
+# 覆盖配置等只对当前机器有意义，别人 clone 也不需要。故整目录不入库，只留在本地磁盘。
+# （标准形态是 deploy/docker-compose.yaml + deploy/db + deploy/supervisor，那才是入库的。）
+deploy/local/
 
 # ---- 内部文档（不入库：架构说明、改动记录、上游参考图）----
 docs/

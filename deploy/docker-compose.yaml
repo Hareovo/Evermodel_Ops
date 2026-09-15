@@ -19,9 +19,6 @@
 #   3306  mysql    可用 .env 的 EVERMODEL_MYSQL_PORT_MAP 改（宿主机已被占用时改 13306）
 #   6379  redis
 #   80    nginx
-#
-# ⚠️ 不要与 local/docker-compose.yml 同时启动 —— 容器名与端口相同，
-#    它们是同一套栈的两种形态（本文件=标准形态，local/=本机 Windows 开发形态）。
 # ============================================================================
 name: evermodel_ops
 

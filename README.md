@@ -5,8 +5,6 @@
 主机纳管、批量执行、任务计划、监控告警、文件分发、Web 终端 —— 一套 Web 界面即可完成，
 **不需要在被管机器上安装任何 Agent**，只要 SSH 可达。
 
-- **来源**：基于 [Spug](https://github.com/openspug/spug) v4.0.1 二次开发（AGPL-3.0），
-  已更名为 Evermodel Ops，并裁掉发布 / 流水线 / 配置中心 / 权限体系等模块
 - **部署形态**：Ubuntu + Docker（数据层）+ supervisor / systemd（后端 5 进程）+ nginx
 - **没有一键脚本**：部署步骤全部在 [`deploy/`](deploy/) 下逐条写明，拷贝粘贴即可执行
 - **本文件只做地图**：具体命令一律在子文档里，不在多处各写一遍
@@ -53,7 +51,6 @@
 | 托管后端 5 个进程 / 查某个服务的启停命令 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) |
 | 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
 | 打前端 / 后端发布包 | [`frontend/BUILD.md`](frontend/BUILD.md) · [`backend/BUILD.md`](backend/BUILD.md) |
-| 在本机 Windows 上开发调试 | [`deploy/local/README.md`](deploy/local/README.md) |
 | 接通 Grafana 监控大屏 | 本文「监控大屏」 |
 | 排查故障 | 本文「故障速查」· [`deploy/supervisor/README.md`](deploy/supervisor/README.md) §七 |
 
@@ -85,8 +82,7 @@ evermodel_ops/
 │   ├── .env.example            compose 环境变量示例（复制成 .env；.env 不入库）
 │   ├── db/                     数据库初始化 SQL + 四步命令说明
 │   ├── nginx/                  容器内 nginx 站点配置
-│   ├── supervisor/             后端 5 进程托管（supervisor + systemd）+ 逐服务启停命令
-│   └── local/                  本机开发形态（Windows + Docker Desktop）
+│   └── supervisor/             后端 5 进程托管（supervisor + systemd）+ 逐服务启停命令
 ├── LICENSE                     AGPL-3.0
 └── README.md
 ```
@@ -292,10 +288,3 @@ Grafana **12.4 起**，`?kiosk`（嵌入）模式会在**第一屏视口底部**
 > 所以二者必须显式对齐 —— 要么在 `overrides.py` 里写死，要么把
 > `EVERMODEL_MYSQL_DB=evermodel_ops`、`EVERMODEL_MYSQL_USER=root`、`EVERMODEL_MYSQL_PASSWORD=...`
 > 注入后端进程。**生产环境务必改掉 `evermodel_ops` 这个初始密码，不要写死在代码里。**
-
-## 许可
-
-[AGPL-3.0](LICENSE)。本项目是 [Spug](https://github.com/openspug/spug) v4.0.1 的二次开发分支。
-按 AGPL 要求，所有源码文件头的上游版权声明（`OpenSpug` / `spug.dev@gmail.com` /
-`github.com/openspug/spug`）均予保留；数据库名、容器名（`spug-mysql` / `spug-redis` / `spug-nginx`）、
-Redis 键前缀等标识符沿用上游未改名；改动的只有产品名与代码包名。

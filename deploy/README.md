@@ -17,8 +17,6 @@ deploy/
 │   ├── evermodel_ops.conf     5 个 [program:*] 定义（含 __APP_DIR__ 占位符）
 │   ├── evermodel_ops.service  systemd 单元，守护 supervisord 本体
 │   └── README.md              逐服务启停命令 + 自检 + 故障速查
-├── local/                     本机开发形态（Windows + Docker Desktop）
-│   └── README.md              端口、启动命令、与标准形态的差异
 └── README.md                  本文件
 ```
 
@@ -28,7 +26,6 @@ deploy/
 | `db/` | 库是空的 —— 建库、建表、建管理员、写默认设置 | [`db/README.md`](db/README.md) |
 | `nginx/` | 反代规则：`/api` 剥前缀转 gunicorn、`/api/ws/` 转 daphne、SPA 回退 index.html | [`nginx/evermodel_ops.conf`](nginx/evermodel_ops.conf) |
 | `supervisor/` | 后端不是单进程，是 5 个常驻进程；谁拉起它们、挂了怎么办、日志写哪、单个怎么重启 | [`supervisor/README.md`](supervisor/README.md) |
-| `local/` | 本机 Windows 上开发调试（数据层 13306、后端 `runserver` 热重载、三个 job 进程） | [`local/README.md`](local/README.md) |
 
 ---
 
@@ -127,6 +124,3 @@ nginx:80 ──┬── /api/ws/  ──> :9002
 | 应用代码 | `backend/`（Django）、`frontend/`（React） |
 | 部署资产（本目录） | `deploy/` |
 | 架构说明与二开改动记录 | 本地 `docs/` 目录（**已在 `.gitignore` 中，不入库**） |
-
-> `local/` 是本机 Windows 开发形态，与 `docker-compose.yaml` **容器名和端口完全相同** ——
-> 同一套栈的两种形态，**不要同时启动**，详见 [`local/README.md`](local/README.md)。
