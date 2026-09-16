@@ -6,7 +6,7 @@
 **不需要在被管机器上安装任何 Agent**，只要 SSH 可达。
 
 - **部署形态**：Ubuntu + Docker（数据层）+ supervisor / systemd（后端 5 进程）+ nginx
-- **没有一键脚本**：部署步骤全部在 [`deploy/`](deploy/) 下逐条写明，拷贝粘贴即可执行
+- **一键部署**:`deploy/docker-compose.yaml` 一键拉起中间件,`deploy/init.sh` 初始化数据库/管理员,`deploy/supervisor/install.sh` 托管后端 5 个进程
 - **本文件只做地图**：具体命令一律在子文档里，不在多处各写一遍
 
 ---
@@ -29,7 +29,7 @@
 
 | 层次 | 选型 |
 |---|---|
-| 后端 | Python 3.13 · Django 4.2 · Django Channels 4 |
+| 后端 | Python 3.12/3.13 · Django 4.2 · Django Channels 4 |
 | 任务队列 | Redis · 自研轻量队列（不依赖 Celery） |
 | 前端 | React 16 · Ant Design 4 · `react-scripts` 3.4.3 + react-app-rewired |
 | 数据库 | MariaDB 10.8（兼容 MySQL）· utf8mb4 |
@@ -45,10 +45,10 @@
 
 | 我想… | 看这里 |
 |---|---|
-| 部署到服务器（从零到能登录） | [`deploy/README.md`](deploy/README.md) —— 服务器依赖 + 四步主干 |
+| 部署到服务器(从零到能登录) | [`deploy/INSTALL.md`](deploy/INSTALL.md) —— 完整 Ubuntu 部署指南 |
 | 起数据层（MariaDB / Redis / nginx） | [`deploy/docker-compose.yaml`](deploy/docker-compose.yaml) |
 | 初始化数据库、建管理员 | [`deploy/db/README.md`](deploy/db/README.md) |
-| 托管后端 5 个进程 / 查某个服务的启停命令 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) |
+| 托管后端 5 个进程 / 逐一启停 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) · `deploy/supervisor/manage.sh` |
 | 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
 | 打前端 / 后端发布包 | [`frontend/BUILD.md`](frontend/BUILD.md) · [`backend/BUILD.md`](backend/BUILD.md) |
 | 接通 Grafana 监控大屏 | 本文「监控大屏」 |
@@ -76,12 +76,15 @@ evermodel_ops/
 │   ├── config-overrides.js     webpack 定制（含 Workbox 摘除补丁，勿删）
 │   ├── build/                  构建产物 = nginx 站点根（不入库）
 │   └── dist/                   前端发布包产出（不入库）
-├── deploy/                     部署资产 —— 只有配置与文档，没有脚本
-│   ├── README.md               部署总览 + 服务器依赖 + 四步主干
-│   ├── docker-compose.yaml     数据层与网关：MariaDB / Redis / nginx
-│   ├── db/                     数据库初始化 SQL + 四步命令说明
+├── deploy/                     部署资产(配置 + 一键脚本)
+│   ├── INSTALL.md             完整 Ubuntu 部署指南(推荐入口)
+│   ├── docker-compose.yaml     数据层与网关:MariaDB / Redis / nginx
+│   ├── init.sh                 一次性初始化:建表 + 默认设置 + 管理员
+│   ├── run.sh                  常用操作入口:中间件 / 初始化 / 后端 / 前端
+│   ├── db/                     数据库初始化 SQL
 │   ├── nginx/                  容器内 nginx 站点配置
-│   └── supervisor/             后端 5 进程托管（supervisor + systemd）+ 逐服务启停命令
+│   ├── supervisor/             后端 5 进程托管 + install/manage 一键脚本
+│   └── data/                   MySQL / Redis 数据目录(不入库,Docker 创建)
 ├── LICENSE                     AGPL-3.0
 └── README.md
 ```
@@ -310,9 +313,7 @@ Grafana **12.4 起**，`?kiosk`（嵌入）模式会在**第一屏视口底部**
 | `EVERMODEL_GRAFANA_URL` | Grafana 地址，用于监控大屏 |
 | `EVERMODEL_VERSION` | 版本号，打包时读取，用于发布包命名 |
 
-> ⚠️ **数据库凭据的默认值不一致，第一次部署必须对齐**：
-> `overrides.py.example` 里的兜底默认沿用了上游，是库 `spug` / 账号 `spug` / 密码 `change-me`；
-> 而 `deploy/db/init.sql` 建的是库 `evermodel_ops`、账号 `root` / `evermodel_ops`。
-> 所以二者必须显式对齐 —— 要么在 `overrides.py` 里写死，要么把
-> `EVERMODEL_MYSQL_DB=evermodel_ops`、`EVERMODEL_MYSQL_USER=root`、`EVERMODEL_MYSQL_PASSWORD=...`
-> 注入后端进程。**生产环境务必改掉 `evermodel_ops` 这个初始密码，不要写死在代码里。**
+> ⚠️ 默认数据库凭据(库 `evermodel_ops` / 账号 `root` / 密码 `evermodel_ops`)在
+> `deploy/docker-compose.yaml` 与 `backend/evermodel_ops/overrides.py.example` 中已统一,
+> 首次部署即可直接用。**生产环境请尽早修改数据库密码**,并同步
+> `overrides.py`、`/etc/evermodel_ops/environment` 与 `init.sh`,再重启后端。
