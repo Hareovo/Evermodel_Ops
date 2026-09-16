@@ -42,6 +42,20 @@ fi
 
 systemctl daemon-reload
 systemctl enable --now evermodel_ops
+
+# supervisord 由 systemd 启动;等待 unix socket 出现,起不来时给出诊断
+for _ in $(seq 1 15); do
+  [ -S /run/evermodel_ops-supervisor.sock ] && break
+  sleep 1
+done
+
+if [ ! -S /run/evermodel_ops-supervisor.sock ]; then
+  echo "supervisord did not start. Diagnostics:" >&2
+  systemctl --no-pager status evermodel_ops --full >&2 || true
+  journalctl -u evermodel_ops -n 30 --no-pager >&2 || true
+  exit 1
+fi
+
 supervisorctl -c "$SUPERVISOR_CONF" reread
 supervisorctl -c "$SUPERVISOR_CONF" update
 supervisorctl -c "$SUPERVISOR_CONF" start all || true
