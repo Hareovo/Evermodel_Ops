@@ -3,7 +3,11 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT_DIR"
-PYTHON=${PYTHON:-python3}
+PYTHON=${PYTHON:-"$ROOT_DIR/venv/bin/python"}
+if [ ! -x "$PYTHON" ]; then
+  echo "Missing backend/venv; create it first" >&2
+  exit 1
+fi
 SERVICE=${1:-all}
 
 run() {
@@ -20,6 +24,7 @@ case "$SERVICE" in
     run "$PYTHON" manage.py runworker
     run "$PYTHON" manage.py runscheduler
     run "$PYTHON" manage.py runmonitor
+    trap 'kill 0' EXIT
     wait
     ;;
   *) echo "Usage: $0 [all|api|worker|scheduler|monitor]" >&2; exit 2 ;;

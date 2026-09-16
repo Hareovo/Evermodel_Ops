@@ -58,7 +58,7 @@ sudo ./deploy/supervisor/install.sh /opt/evermodel_ops
 ./deploy/supervisor/manage.sh restart api
 ```
 
-Windows 开发环境使用 `deploy\\run.bat`；Supervisor 仅适用于 Linux。
+所有入口均为 Ubuntu shell 脚本;Supervisor 仅适用于 Linux。
 
 ## 二、服务器依赖（只装一次）
 
@@ -167,7 +167,7 @@ Compose 数据保存在项目内目录：
 ./deploy/supervisor/manage.sh restart api
 ```
 
-Windows 开发环境使用 `deploy\\run.bat` 和 `backend\\tools\\start-dev.bat`、`frontend\\start-dev.bat`。
+所有入口均为 Ubuntu shell 脚本;Supervisor 仅适用于 Linux。
 
 ## 四、与仓库其他部分的关系
 
