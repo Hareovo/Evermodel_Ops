@@ -123,6 +123,8 @@ systemd: evermodel_ops.service                 ← 守护 supervisor 本体（�
 
 推荐部署结构:Docker Compose 运行 MariaDB、Redis、nginx;宿主机虚拟环境运行后端 5 个进程,由 supervisor + systemd 托管。Compose 不依赖 `.env` 文件,中间件数据保存在 `deploy/data/` 下。
 
+> 📄 **完整逐步部署指南见 [`deploy/INSTALL.md`](deploy/INSTALL.md)**,含依赖安装、中间件、初始化、supervisor 一键托管、前端发布、验证与常见问题。以下为命令速览。
+
 目标系统为 Ubuntu 20.04/22.04/24.04:
 
 ```bash
