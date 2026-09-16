@@ -1,10 +1,110 @@
-# Copy to overrides.py for local-only settings. Environment variables are preferred.
+# ============================================================
+# Evermodel Ops 环境配置示例
+#
+# 用法:
+#   cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
+#   然后按需修改下方标注「⚠️」的项。
+#
+# 本文件会被 .gitignore 忽略，overrides.py 不会进入 Git 仓库。
+# 加载方式:由 evermodel_ops/settings.py 末尾 `from evermodel_ops.overrides import *`
+# 引入，优先级高于默认值。
+# ============================================================
 import os
 
-# Optional local filesystem/Grafana overrides; database and Redis use EVERMODEL_* env.
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# ------------------------------------------------------------
+# 运行模式(生产部署不要开 DEBUG)
+# ------------------------------------------------------------
+DEBUG = os.environ.get('EVERMODEL_DEBUG', 'false').lower() in ('1', 'true', 'yes', 'on')
+
+# ⚠️ 生产必须改为你的域名/IP，逗号分隔。
+#    例:ALLOWED_HOSTS = ['127.0.0.1', 'ops.example.com']
+ALLOWED_HOSTS = os.environ.get('EVERMODEL_ALLOWED_HOSTS', '*').split(',')
+
+# ------------------------------------------------------------
+# Django SECRET_KEY —— ⚠️ 生产必须设置为强随机值
+# 生成:python -c "import secrets; print(secrets.token_urlsafe(50))"
+# ------------------------------------------------------------
+SECRET_KEY = os.environ.get(
+    'EVERMODEL_SECRET_KEY',
+    'dev-only-insecure-key-change-in-production',
+)
+
+# ------------------------------------------------------------
+# 数据层(Docker Compose，见 deploy/docker-compose.yaml)
+# 后端运行在宿主机，通过 127.0.0.1 访问容器映射端口。
+# ------------------------------------------------------------
+MYSQL_HOST = os.environ.get('EVERMODEL_MYSQL_HOST', '127.0.0.1')
+MYSQL_PORT = os.environ.get('EVERMODEL_MYSQL_PORT', '3306')
+MYSQL_DB = os.environ.get('EVERMODEL_MYSQL_DB', 'evermodel_ops')
+MYSQL_USER = os.environ.get('EVERMODEL_MYSQL_USER', 'root')
+# ⚠️ 生产必须修改为强密码，并同步 deploy/init.sh 与
+#    /etc/evermodel_ops/environment 中的 EVERMODEL_MYSQL_PASSWORD。
+MYSQL_PASSWORD = os.environ.get('EVERMODEL_MYSQL_PASSWORD', 'evermodel_ops')
+
+DATABASES = {
+    'default': {
+        'ATOMIC_REQUESTS': True,
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': MYSQL_DB,
+        'USER': MYSQL_USER,
+        'PASSWORD': MYSQL_PASSWORD,
+        'HOST': MYSQL_HOST,
+        'PORT': MYSQL_PORT,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'sql_mode': 'STRICT_TRANS_TABLES',
+        },
+    },
+}
+
+REDIS_HOST = os.environ.get('EVERMODEL_REDIS_HOST', '127.0.0.1')
+REDIS_PORT = int(os.environ.get('EVERMODEL_REDIS_PORT', '6379'))
+
+# redis-py 8+ 默认 socket_timeout=5s，会打断后台阻塞读，必须保持 None
+REDIS_POOL_KWARGS = {
+    'socket_timeout': None,
+    'socket_connect_timeout': 10,
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/1',
+        'KEY_PREFIX': 'evermodel_ops',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'CONNECTION_POOL_KWARGS': dict(REDIS_POOL_KWARGS),
+        },
+    },
+}
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [{
+                'host': REDIS_HOST,
+                'port': REDIS_PORT,
+                **REDIS_POOL_KWARGS,
+            }],
+            'prefix': 'evermodel_ops:channel',
+            'capacity': 1000,
+            'expiry': 120,
+        },
+    },
+}
+
+# ------------------------------------------------------------
+# 仓库缓存与构建产物目录
+# ------------------------------------------------------------
 REPOS_DIR = os.path.join(BASE_DIR, 'repos')
 BUILD_DIR = os.path.join(REPOS_DIR, 'build')
+
+# ------------------------------------------------------------
+# 监控大屏(Grafana)—— 启用时才需要改；地址不带结尾斜杠
+# ------------------------------------------------------------
 GRAFANA_URL = os.environ.get('EVERMODEL_GRAFANA_URL', '')
 GRAFANA_DASHBOARDS = ()
 GRAFANA_TIMEOUT = 5

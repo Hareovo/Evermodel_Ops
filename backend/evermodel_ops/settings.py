@@ -62,22 +62,21 @@ ASGI_APPLICATION = 'evermodel_ops.asgi.application'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Database
-# https://docs.djangoproject.com/en/4.2/ref/settings/#databases
-
-mysql_db = os.environ.get('EVERMODEL_MYSQL_DB')
-if mysql_db:
+# 默认连接 MySQL（与 deploy/docker-compose.yaml 一致）。仅本地调试需要 SQLite 时，
+# 设置 EVERMODEL_USE_SQLITE=1，并通过 EVERMODEL_MYSQL_* 指定连接信息。
+if os.environ.get('EVERMODEL_USE_SQLITE') == '1':
+    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
+else:
     DATABASES = {'default': {
         'ATOMIC_REQUESTS': True,
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': mysql_db,
+        'NAME': os.environ.get('EVERMODEL_MYSQL_DB', 'evermodel_ops'),
         'USER': os.environ.get('EVERMODEL_MYSQL_USER', 'root'),
-        'PASSWORD': os.environ.get('EVERMODEL_MYSQL_PASSWORD', ''),
+        'PASSWORD': os.environ.get('EVERMODEL_MYSQL_PASSWORD', 'evermodel_ops'),
         'HOST': os.environ.get('EVERMODEL_MYSQL_HOST', '127.0.0.1'),
         'PORT': os.environ.get('EVERMODEL_MYSQL_PORT', '3306'),
         'OPTIONS': {'charset': 'utf8mb4', 'sql_mode': 'STRICT_TRANS_TABLES'},
     }}
-else:
-    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 
 REDIS_HOST = os.environ.get('EVERMODEL_REDIS_HOST', '127.0.0.1')
 REDIS_PORT = int(os.environ.get('EVERMODEL_REDIS_PORT', '6379'))
