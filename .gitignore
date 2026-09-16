@@ -53,6 +53,7 @@ backend/db.sqlite3
 # 覆盖配置等只对当前机器有意义，别人 clone 也不需要。故整目录不入库，只留在本地磁盘。
 # （标准形态是 deploy/docker-compose.yaml + deploy/db + deploy/supervisor，那才是入库的。）
 deploy/local/
+deploy/data/
 
 # ---- 内部文档（不入库：架构说明、改动记录、上游参考图）----
 docs/

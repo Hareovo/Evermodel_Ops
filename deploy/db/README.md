@@ -14,7 +14,18 @@ Evermodel Ops 的数据库初始化。**默认库 `evermodel_ops`，账号 `root
 
 ---
 
-## 一、初始化（四步）
+## 一、初始化（推荐一条命令）
+
+```bash
+cd /opt/evermodel_ops
+export EVERMODEL_MYSQL_PASSWORD=evermodel_ops
+export EVERMODEL_ADMIN_PASSWORD='请设置管理员密码'
+./deploy/init.sh
+```
+
+脚本会执行迁移、补齐缺失设置并创建管理员；重复执行不会覆盖已有设置或管理员密码。
+
+## 二、手工初始化（备用）
 
 下面的命令都在**仓库根目录**执行。
 
@@ -71,7 +82,7 @@ docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops evermodel_ops < depl
 
 ---
 
-## 二、账号与凭据约定
+## 三、账号与凭据约定
 
 | 项目 | 默认值 | 备注 |
 |---|---|---|
@@ -111,7 +122,7 @@ cd backend && python manage.py user enable -u admin
 
 ---
 
-## 三、为什么要放行 `root@'%'`
+## 四、为什么要放行 `root@'%'`
 
 后端和数据库常常不在同一个网络命名空间里（后端在宿主机、库在容器）。
 此时经 Docker 端口映射连进来的来源 IP 是**网桥网关**（如 `172.20.0.1`），
@@ -122,7 +133,7 @@ cd backend && python manage.py user enable -u admin
 
 ---
 
-## 四、重置数据库（⚠️ 会清空全部数据）
+## 五、重置数据库（⚠️ 会清空全部数据）
 
 ```bash
 # ① 备份（先做这个！）
@@ -142,7 +153,7 @@ docker compose up -d
 
 ---
 
-## 五、故障速查
+## 六、故障速查
 
 | 现象 | 原因 | 处理 |
 |---|---|---|

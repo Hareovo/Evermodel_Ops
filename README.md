@@ -121,9 +121,9 @@ systemd: evermodel_ops.service                 ← 守护 supervisor 本体（�
 
 ## 部署到服务器
 
-推荐部署结构：Docker Compose 运行 MariaDB、Redis、nginx；宿主机虚拟环境运行后端 5 个进程，由 supervisor + systemd 托管。Compose 不依赖 `.env` 文件，所有默认端口和服务配置都在 `deploy/docker-compose.yaml`。
+推荐部署结构:Docker Compose 运行 MariaDB、Redis、nginx;宿主机虚拟环境运行后端 5 个进程,由 supervisor + systemd 托管。Compose 不依赖 `.env` 文件,中间件数据保存在 `deploy/data/` 下。
 
-目标系统为 Ubuntu 20.04/22.04/24.04。下面以 `/data/evermodel_ops` 为例：
+目标系统为 Ubuntu 20.04/22.04/24.04:
 
 ```bash
 # 1. 安装依赖并进入项目
@@ -132,13 +132,11 @@ sudo apt install -y python3 python3-venv python3-dev gcc pkg-config \
   default-libmysqlclient-dev libssl-dev supervisor docker.io \
   sshpass rsync sshfs iputils-ping curl
 sudo systemctl enable --now docker
-sudo mkdir -p /data
-cd /data
-# 将项目上传或 clone 到 /data/evermodel_ops
-cd /data/evermodel_ops
+cd /opt
+# 将项目上传或 clone 到 /opt/evermodel_ops
+cd /opt/evermodel_ops
 
-# 2. 启动 MariaDB、Redis、nginx
-# 初始数据库密码见 deploy/docker-compose.yaml，首次登录后必须修改
+# 2. 启动 MariaDB、Redis、nginx(数据在 deploy/data/)
 docker compose -f deploy/docker-compose.yaml up -d
 
 # 3. 创建 Python 环境并安装后端依赖
@@ -146,30 +144,20 @@ cd backend
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
-
-# 4. 配置后端连接信息
-# 复制示例后填写生产数据库密码、SECRET_KEY、Grafana 地址等
 cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
-# 也可以通过 supervisor 的 environment 统一注入，详见 deploy/supervisor/README.md
 
-# 5. 初始化数据库、管理员和默认设置
-cd /data/evermodel_ops
-docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
-cd backend
-. venv/bin/activate
-EVERMODEL_MYSQL_DB=evermodel_ops EVERMODEL_MYSQL_USER=root \
-EVERMODEL_MYSQL_PASSWORD=实际数据库密码 python manage.py updatedb
-python manage.py user add -u admin -p '首次登录密码' -n 管理员 -s
-cd ..
-docker exec -i evermodel-mysql mysql -uroot -p实际数据库密码 evermodel_ops < deploy/db/init.defaults.sql
+# 4. 初始化数据库、默认设置和管理员
+cd /opt/evermodel_ops
+export EVERMODEL_MYSQL_PASSWORD=evermodel_ops
+export EVERMODEL_ADMIN_PASSWORD='请修改为管理员密码'
+./deploy/init.sh
+
+# 5. 一键安装 supervisor + systemd,托管 5 个后端进程
+#    首次会生成 /etc/evermodel_ops/environment,须在其中填写真实密钥后再启动
+sudo ./deploy/supervisor/install.sh /opt/evermodel_ops
+
+# 6. 前端产物:开发机 npm run dist 后上传解压到 frontend/build/
 ```
-
-然后：
-
-1. 按 [`deploy/supervisor/README.md`](deploy/supervisor/README.md) 将 `__APP_DIR__` 替换为 `/data/evermodel_ops`，安装并启动 5 个后端进程。
-2. 按 [`frontend/BUILD.md`](frontend/BUILD.md) 在开发机打包前端，将内容上传到 `frontend/build/`。
-3. 打开 `http://服务器地址/`，登录后立即修改管理员密码。
-4. 数据库初始密码修改后，必须同步更新 supervisor 环境变量或 `overrides.py`，然后重启后端。
 
 **装完自检**（三条都要通过）：
 

@@ -28,7 +28,39 @@ deploy/
 
 ---
 
-## 〇、服务器依赖（只装一次）
+## 一、最快部署
+
+```bash
+cd /opt/evermodel_ops
+
+docker compose -f deploy/docker-compose.yaml up -d
+
+cd backend
+python3 -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt
+cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
+
+export EVERMODEL_MYSQL_PASSWORD=evermodel_ops
+export EVERMODEL_ADMIN_PASSWORD='请修改为管理员密码'
+cd ..
+./deploy/init.sh
+sudo ./deploy/supervisor/install.sh /opt/evermodel_ops
+```
+
+必须修改：`EVERMODEL_MYSQL_PASSWORD`、`EVERMODEL_ADMIN_PASSWORD`、`EVERMODEL_SECRET_KEY`、`EVERMODEL_ALLOWED_HOSTS`；启用 Grafana 时再设置 `EVERMODEL_GRAFANA_URL`。中间件数据保存在 `deploy/data/mysql` 和 `deploy/data/redis`，不进入 Git。
+
+日常管理：
+
+```bash
+./deploy/run.sh middleware ps
+./deploy/run.sh backend status
+./deploy/supervisor/manage.sh restart api
+```
+
+Windows 开发环境使用 `deploy\\run.bat`；Supervisor 仅适用于 Linux。
+
+## 二、服务器依赖（只装一次）
 
 目标系统 Ubuntu 20.04 / 22.04 / 24.04（x86_64），其余发行版包名同理。
 
@@ -56,7 +88,7 @@ curl -fsSL https://get.docker.com | sudo sh
 sudo systemctl enable --now docker
 ```
 
-## 一、部署顺序（4 步）
+## 三、部署顺序（参考）
 
 以 `/data/evermodel_ops` 为例。每步的完整命令在对应文档里，这里只给主干。
 
@@ -104,16 +136,38 @@ nginx:80 ──┬── /api/ws/  ──> :9002
 > ⚠️ 少起 `worker` / `monitor` / `scheduler` 的后果是「平台看着正常、功能不工作」，
 > 对照表见 [`supervisor/README.md`](supervisor/README.md) §三。
 
-## 三、为什么这里没有一键脚本
+## 三、辅助入口与配置
 
-本目录刻意**只放配置、不放 shell 脚本**：部署是低频、需要边看边判断的操作，
-一条条手工执行才能看清每一步在动什么；脚本反而会把「失败在哪一步」藏起来。
-所以原来的 `deploy/supervisor/install.sh` 与 `db/init.sh` 已移除 ——
-对应步骤改成文档里可**直接复制粘贴**的命令序列（见各自的 README）。
+Compose 数据保存在项目内目录：
 
-> 例外：`backend/tools/start-*.sh`（5 个）不是部署脚本，而是**进程启动包装** ——
-> supervisor 的 `command` 指向它们，里面只做 `cd backend && source venv/bin/activate`
-> 再 `exec` 真正的程序，属于应用代码，故留在 `backend/`。
+- `deploy/data/mysql/`
+- `deploy/data/redis/`
+
+这两个目录由 Docker 首次启动时创建，已加入 `.gitignore`，不进入 Git。备份中间件数据时备份这两个目录即可。
+
+需要修改的配置项：
+
+| 配置 | 位置 | 说明 |
+|---|---|---|
+| 数据库初始密码 | `deploy/docker-compose.yaml` 的 `MYSQL_ROOT_PASSWORD` | 仅首次初始化生效 |
+| 数据库/Redis/密钥 | `/etc/evermodel_ops/environment` | supervisor 安装时生成，权限 600 |
+| 本地开发覆盖 | `backend/evermodel_ops/overrides.py` | 复制示例后按需修改 |
+| `EVERMODEL_SECRET_KEY` | env / overrides | 生产必须设置 |
+| `EVERMODEL_ALLOWED_HOSTS` | env / overrides | 生产必须设置 |
+| Grafana 地址 | `EVERMODEL_GRAFANA_URL` | 仅启用大屏时需要 |
+| 项目目录 | `deploy/supervisor/install.sh /opt/evermodel_ops` | 替换为实际路径 |
+| 前端产物 | `frontend/build/` | nginx 容器挂载 |
+
+常用入口：
+
+```bash
+./deploy/run.sh middleware ps        # Compose 状态
+./deploy/run.sh init                 # 初始化数据库/管理员
+./deploy/run.sh backend status       # supervisor 状态
+./deploy/supervisor/manage.sh restart api
+```
+
+Windows 开发环境使用 `deploy\\run.bat` 和 `backend\\tools\\start-dev.bat`、`frontend\\start-dev.bat`。
 
 ## 四、与仓库其他部分的关系
 
