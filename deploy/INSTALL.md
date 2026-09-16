@@ -131,16 +131,26 @@ export EVERMODEL_ADMIN_PASSWORD='请修改为管理员密码'
 
 ```bash
 cd /opt/evermodel_ops
+
+# 首次需给脚本加可执行权限(仓库里的 .sh 可能未带执行位)
+chmod +x deploy/init.sh deploy/run.sh \
+  deploy/supervisor/install.sh deploy/supervisor/manage.sh \
+  deploy/supervisor/start-supervisord.sh \
+  backend/tools/start-dev.sh backend/tools/start-api.sh \
+  backend/tools/start-ws.sh backend/tools/start-worker.sh \
+  backend/tools/start-monitor.sh backend/tools/start-scheduler.sh \
+  frontend/start-dev.sh
+
 sudo ./deploy/supervisor/install.sh /opt/evermodel_ops
 ```
 
-首次安装会在 `/etc/evermodel_ops/environment` 生成配置模板，**必须编辑该文件**填入真实密码/密钥后再启动服务：
+首次安装会在 `/etc/evermodel_ops/environment` 生成配置模板。**必须先编辑该文件**填入真实密码/密钥，否则 5 个进程会连不上数据库/Redis：
 
 ```bash
 sudo vim /etc/evermodel_ops/environment
 ```
 
-至少修改：
+至少修改:
 
 ```ini
 EVERMODEL_MYSQL_PASSWORD=evermodel_ops

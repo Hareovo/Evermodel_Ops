@@ -16,7 +16,8 @@ fi
 mkdir -p "$APP_DIR/backend/logs" "$CONF_DIR/conf.d" /var/log/evermodel_ops
 install -m 0644 "$APP_DIR/deploy/supervisor/supervisord.conf" "$SUPERVISOR_CONF"
 sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.conf" > "$PROGRAM_CONF"
-install -m 0644 "$APP_DIR/deploy/supervisor/evermodel_ops.service" /etc/systemd/system/evermodel_ops.service
+sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.service" \
+  > /etc/systemd/system/evermodel_ops.service
 
 if [ ! -f "$ENV_FILE" ]; then
   {
@@ -33,6 +34,8 @@ if [ ! -f "$ENV_FILE" ]; then
   } > "$ENV_FILE"
   chmod 0600 "$ENV_FILE"
   echo "Wrote $ENV_FILE; edit it to set real passwords before starting services."
+  echo "IMPORTANT: open $ENV_FILE and set EVERMODEL_MYSQL_PASSWORD (match compose/init)"
+  echo "and EVERMODEL_SECRET_KEY; then run: sudo systemctl restart evermodel_ops"
 else
   echo "Keeping existing $ENV_FILE."
 fi
