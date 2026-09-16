@@ -3,7 +3,7 @@ name: evermodel_ops
 services:
   mysql:
     image: mariadb:10.8
-    container_name: spug-mysql
+    container_name: evermodel-mysql
     restart: unless-stopped
     ports:
       - "127.0.0.1:3306:3306"
@@ -25,7 +25,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: spug-redis
+    container_name: evermodel-redis
     restart: unless-stopped
     ports:
       - "127.0.0.1:6379:6379"
@@ -40,7 +40,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: spug-nginx
+    container_name: evermodel-nginx
     restart: unless-stopped
     ports:
       - "80:80"

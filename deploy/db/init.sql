@@ -5,7 +5,7 @@
 -- 幂等，可重复执行。
 --
 -- 用法（容器内执行）：
---     docker exec -i spug-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
+--     docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
 -- 用法（宿主机 mysql 客户端）：
 --     mysql -h127.0.0.1 -P3306 -uroot -pevermodel_ops < deploy/db/init.sql
 --

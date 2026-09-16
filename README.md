@@ -154,14 +154,14 @@ cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
 
 # 5. 初始化数据库、管理员和默认设置
 cd /data/evermodel_ops
-docker exec -i spug-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
+docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
 cd backend
 . venv/bin/activate
 EVERMODEL_MYSQL_DB=evermodel_ops EVERMODEL_MYSQL_USER=root \
 EVERMODEL_MYSQL_PASSWORD=实际数据库密码 python manage.py updatedb
 python manage.py user add -u admin -p '首次登录密码' -n 管理员 -s
 cd ..
-docker exec -i spug-mysql mysql -uroot -p实际数据库密码 evermodel_ops < deploy/db/init.defaults.sql
+docker exec -i evermodel-mysql mysql -uroot -p实际数据库密码 evermodel_ops < deploy/db/init.defaults.sql
 ```
 
 然后：
@@ -192,7 +192,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/    # 200（返回登�
 备份数据库：
 
 ```bash
-docker exec spug-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" evermodel_ops' \
+docker exec evermodel-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" evermodel_ops' \
   > evermodel_ops-$(date +%F).sql
 ```
 

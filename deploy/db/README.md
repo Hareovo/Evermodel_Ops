@@ -22,7 +22,7 @@ Evermodel Ops 的数据库初始化。**默认库 `evermodel_ops`，账号 `root
 
 ```bash
 # 数据库跑在 compose 容器里（推荐）
-docker exec -i spug-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
+docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
 
 # 数据库在别的机器 / 用本机 mysql 客户端
 mysql -h127.0.0.1 -P3306 -uroot -pevermodel_ops < deploy/db/init.sql
@@ -57,7 +57,7 @@ python manage.py user reset -u admin -p evermodel_ops
 ### ④ 平台默认设置
 
 ```bash
-docker exec -i spug-mysql mysql -uroot -pevermodel_ops evermodel_ops < deploy/db/init.defaults.sql
+docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops evermodel_ops < deploy/db/init.defaults.sql
 ```
 
 ### 之后
@@ -86,7 +86,7 @@ docker exec -i spug-mysql mysql -uroot -pevermodel_ops evermodel_ops < deploy/db
 
 ```bash
 # 改数据库密码（同时要改 overrides.py 或环境变量，并重启后端 5 个进程）
-docker exec -it spug-mysql mysql -uroot -p -e \
+docker exec -it evermodel-mysql mysql -uroot -p -e \
   "ALTER USER 'root'@'%' IDENTIFIED BY '新强密码'; FLUSH PRIVILEGES;"
 
 # 改平台管理员密码
@@ -126,7 +126,7 @@ cd backend && python manage.py user enable -u admin
 
 ```bash
 # ① 备份（先做这个！）
-docker exec spug-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" evermodel_ops' \
+docker exec evermodel-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" evermodel_ops' \
   > evermodel_ops-$(date +%F).sql
 
 # ② 重建：删数据卷后重新拉起容器（数据卷名带 compose 项目前缀）
