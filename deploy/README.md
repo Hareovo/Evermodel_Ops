@@ -5,7 +5,6 @@
 ```
 deploy/
 ├── docker-compose.yaml        数据层与网关：MariaDB + Redis + nginx（标准形态）
-├── .env.example               compose 环境变量示例（复制成 .env；.env 不入库）
 ├── db/                        数据库初始化
 │   ├── init.sql               建库 + 建/授权账号 + 字符集
 │   ├── init.defaults.sql      平台默认设置（建表之后执行）
@@ -22,7 +21,7 @@ deploy/
 
 | 组成 | 解决什么问题 | 入口文档 |
 |---|---|---|
-| `docker-compose.yaml` + `.env.example` | 数据层与网关一次起好：MariaDB 10.8、Redis 7、nginx | 本文件 §一 |
+| `docker-compose.yaml` | 数据层与网关一次起好：MariaDB 10.8、Redis 7、nginx | 本文件 §一 |
 | `db/` | 库是空的 —— 建库、建表、建管理员、写默认设置 | [`db/README.md`](db/README.md) |
 | `nginx/` | 反代规则：`/api` 剥前缀转 gunicorn、`/api/ws/` 转 daphne、SPA 回退 index.html | [`nginx/evermodel_ops.conf`](nginx/evermodel_ops.conf) |
 | `supervisor/` | 后端不是单进程，是 5 个常驻进程；谁拉起它们、挂了怎么办、日志写哪、单个怎么重启 | [`supervisor/README.md`](supervisor/README.md) |
@@ -66,7 +65,6 @@ APP_DIR=/data/evermodel_ops
 
 # ① 数据层与网关 —— MariaDB / Redis / nginx
 cd $APP_DIR/deploy
-cp .env.example .env          # ⚠️ 生产环境务必改 EVERMODEL_MYSQL_ROOT_PASSWORD
 docker compose up -d
 
 # ② 数据库初始化 —— 建库 → 建表 → 建管理员 → 写默认设置

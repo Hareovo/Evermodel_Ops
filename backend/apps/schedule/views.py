@@ -10,6 +10,7 @@ from apps.schedule.models import Task, History
 from apps.schedule.executors import dispatch_job
 from apps.host.models import Host
 from django.conf import settings
+from django.db import transaction
 from libs import json_response, JsonParser, Argument, human_datetime
 import json
 
@@ -87,12 +88,14 @@ class Schedule(View):
             Argument('id', type=int, help='请指定操作对象')
         ).parse(request.GET)
         if error is None:
-            task = Task.objects.filter(pk=form.id).first()
-            if task:
-                if task.is_active:
-                    return json_response(error='该任务在运行中，请先停止任务再尝试删除')
-                task.delete()
-                History.objects.filter(task_id=task.id).delete()
+            with transaction.atomic():
+                task = Task.objects.select_for_update().filter(pk=form.id).first()
+                if task:
+                    if task.is_active:
+                        return json_response(error='该任务在运行中，请先停止任务再尝试删除')
+                    task_id = task.id
+                    task.delete()
+                    History.objects.filter(task_id=task_id).delete()
         return json_response(error=error)
 
 
@@ -103,9 +106,13 @@ class HistoryView(View):
             return json_response(error='未找到指定任务')
 
         h_id = request.GET.get('id')
-        if h_id:
+        if h_id is not None:
             h_id = task.latest_id if h_id == 'latest' else h_id
-            return json_response(self._fetch_detail(h_id))
+            if h_id is None:
+                return json_response(error='未找到指定执行记录')
+            if not str(h_id).isascii() or not str(h_id).isdigit() or not 0 < int(h_id) <= 2147483647:
+                return json_response(error='执行记录ID格式错误')
+            return self._fetch_detail(int(h_id), t_id)
         histories = History.objects.filter(task_id=t_id)
         return json_response([x.to_list() for x in histories])
 
@@ -128,9 +135,11 @@ class HistoryView(View):
         )
         return json_response(history.id)
 
-    def _fetch_detail(self, h_id):
-        record = History.objects.filter(pk=h_id).first()
-        outputs = json.loads(record.output)
+    def _fetch_detail(self, h_id, t_id):
+        record = History.objects.filter(pk=h_id, task_id=t_id).first()
+        if not record:
+            return json_response(error='未找到指定执行记录')
+        outputs = json.loads(record.output or '{}')
         host_ids = (x for x in outputs.keys() if x != 'local')
         hosts_info = {str(x.id): x.name for x in Host.objects.filter(id__in=host_ids)}
         data = {'run_time': record.run_time, 'success': 0, 'failure': 0, 'duration': 0, 'outputs': []}
@@ -146,7 +155,8 @@ class HistoryView(View):
                 'code': code,
                 'duration': duration,
                 'output': out})
-        data['duration'] = f"{data['duration'] / len(outputs):.3f}"
+        valid_count = data['success'] + data['failure']
+        data['duration'] = f"{data['duration'] / valid_count:.3f}" if valid_count else '0.000'
         return data
 
 

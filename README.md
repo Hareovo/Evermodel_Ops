@@ -46,7 +46,7 @@
 | 我想… | 看这里 |
 |---|---|
 | 部署到服务器（从零到能登录） | [`deploy/README.md`](deploy/README.md) —— 服务器依赖 + 四步主干 |
-| 起数据层（MariaDB / Redis / nginx） | [`deploy/docker-compose.yaml`](deploy/docker-compose.yaml) + [`deploy/.env.example`](deploy/.env.example) |
+| 起数据层（MariaDB / Redis / nginx） | [`deploy/docker-compose.yaml`](deploy/docker-compose.yaml) |
 | 初始化数据库、建管理员 | [`deploy/db/README.md`](deploy/db/README.md) |
 | 托管后端 5 个进程 / 查某个服务的启停命令 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) |
 | 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
@@ -79,7 +79,6 @@ evermodel_ops/
 ├── deploy/                     部署资产 —— 只有配置与文档，没有脚本
 │   ├── README.md               部署总览 + 服务器依赖 + 四步主干
 │   ├── docker-compose.yaml     数据层与网关：MariaDB / Redis / nginx
-│   ├── .env.example            compose 环境变量示例（复制成 .env；.env 不入库）
 │   ├── db/                     数据库初始化 SQL + 四步命令说明
 │   ├── nginx/                  容器内 nginx 站点配置
 │   └── supervisor/             后端 5 进程托管（supervisor + systemd）+ 逐服务启停命令
@@ -108,7 +107,7 @@ systemd: evermodel_ops.service                 ← 守护 supervisor 本体（�
         └── evermodel_ops-scheduler   任务计划调度
 
 数据层（Docker，见 deploy/docker-compose.yaml）
-  ├── MariaDB   127.0.0.1:3306   库 evermodel_ops，账号 root / evermodel_ops（初始值）
+  ├── MariaDB   127.0.0.1:3306   库 evermodel_ops，账号 root / compose 中配置的初始值
   └── Redis     127.0.0.1:6379   业务队列 + WebSocket channel layer
 ```
 
@@ -116,22 +115,61 @@ systemd: evermodel_ops.service                 ← 守护 supervisor 本体（�
 
 | 关注点 | 位置 |
 |---|---|
-| 数据层与网关 | `deploy/docker-compose.yaml` + `deploy/.env` |
+| 数据层与网关 | `deploy/docker-compose.yaml` |
 | 后端运行期配置（库地址、密码、Grafana 地址） | `backend/evermodel_ops/overrides.py` 或 `EVERMODEL_*` 环境变量 |
 | 进程托管与日志 | `deploy/supervisor/` |
 
 ## 部署到服务器
 
-> 目标系统 Ubuntu 20.04 / 22.04 / 24.04（x86_64）。下文以 `/data/evermodel_ops` 为例。
-> `deploy/supervisor/` 的配置用 `__APP_DIR__` 占位符，部署目录可自选。
+推荐部署结构：Docker Compose 运行 MariaDB、Redis、nginx；宿主机虚拟环境运行后端 5 个进程，由 supervisor + systemd 托管。Compose 不依赖 `.env` 文件，所有默认端口和服务配置都在 `deploy/docker-compose.yaml`。
 
-| 步骤 | 内容 | 完整命令 |
-|---|---|---|
-| **〇** 环境准备 | apt 装 python 编译依赖 + supervisor + nginx，装 Docker | [`deploy/README.md`](deploy/README.md) §〇 |
-| **①** 数据层与网关 | MariaDB / Redis / nginx 三个容器 | [`deploy/README.md`](deploy/README.md) §一 |
-| **②** 数据库初始化 | 建库 → 建表 → 建管理员 → 写默认设置 | [`deploy/db/README.md`](deploy/db/README.md) §一 |
-| **③** 后端 5 进程 | supervisor 托管 + systemd 守护 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) §二 |
-| **④** 前端产物 | 开发机 `npm run dist` → 上传解压到 `frontend/build` | [`frontend/BUILD.md`](frontend/BUILD.md) §六 |
+目标系统为 Ubuntu 20.04/22.04/24.04。下面以 `/data/evermodel_ops` 为例：
+
+```bash
+# 1. 安装依赖并进入项目
+sudo apt update
+sudo apt install -y python3 python3-venv python3-dev gcc pkg-config \
+  default-libmysqlclient-dev libssl-dev supervisor docker.io \
+  sshpass rsync sshfs iputils-ping curl
+sudo systemctl enable --now docker
+sudo mkdir -p /data
+cd /data
+# 将项目上传或 clone 到 /data/evermodel_ops
+cd /data/evermodel_ops
+
+# 2. 启动 MariaDB、Redis、nginx
+# 初始数据库密码见 deploy/docker-compose.yaml，首次登录后必须修改
+docker compose -f deploy/docker-compose.yaml up -d
+
+# 3. 创建 Python 环境并安装后端依赖
+cd backend
+python3 -m venv venv
+. venv/bin/activate
+pip install -r requirements.txt
+
+# 4. 配置后端连接信息
+# 复制示例后填写生产数据库密码、SECRET_KEY、Grafana 地址等
+cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
+# 也可以通过 supervisor 的 environment 统一注入，详见 deploy/supervisor/README.md
+
+# 5. 初始化数据库、管理员和默认设置
+cd /data/evermodel_ops
+docker exec -i spug-mysql mysql -uroot -pevermodel_ops < deploy/db/init.sql
+cd backend
+. venv/bin/activate
+EVERMODEL_MYSQL_DB=evermodel_ops EVERMODEL_MYSQL_USER=root \
+EVERMODEL_MYSQL_PASSWORD=实际数据库密码 python manage.py updatedb
+python manage.py user add -u admin -p '首次登录密码' -n 管理员 -s
+cd ..
+docker exec -i spug-mysql mysql -uroot -p实际数据库密码 evermodel_ops < deploy/db/init.defaults.sql
+```
+
+然后：
+
+1. 按 [`deploy/supervisor/README.md`](deploy/supervisor/README.md) 将 `__APP_DIR__` 替换为 `/data/evermodel_ops`，安装并启动 5 个后端进程。
+2. 按 [`frontend/BUILD.md`](frontend/BUILD.md) 在开发机打包前端，将内容上传到 `frontend/build/`。
+3. 打开 `http://服务器地址/`，登录后立即修改管理员密码。
+4. 数据库初始密码修改后，必须同步更新 supervisor 环境变量或 `overrides.py`，然后重启后端。
 
 **装完自检**（三条都要通过）：
 
@@ -168,7 +206,7 @@ docker exec spug-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" eve
 | 接口 400 DisallowedHost | `ALLOWED_HOSTS` 没配 / Host 未透传 | 改 `overrides.py`；确认 nginx 有 `proxy_set_header Host $host` |
 | 接口 401，但用登录接口探又是 200 | 探了需要鉴权的接口 | `/account/login/` 在免鉴权白名单里，探活用它 |
 | pip 装 mysqlclient 报 `mysql.h: No such file` | 缺编译依赖 | 装 `python3-dev gcc pkg-config default-libmysqlclient-dev libssl-dev` |
-| 数据库连不上 | 容器没起 / 密码不一致 | `cd deploy && docker compose ps`；核对 `overrides.py` 与 `deploy/.env` |
+| 数据库连不上 | 容器没起 / 密码不一致 | `cd deploy && docker compose ps`；核对 supervisor 环境变量与 `overrides.py` |
 | Web 终端连上几秒断开 | redis-py 8 默认 socket 超时 | 配置里的 `REDIS_POOL_KWARGS socket_timeout: None` 不要删（已内置） |
 | 批量执行卡 `### Waiting for scheduling ...` | worker 没起（**不是脚本问题**） | `supervisorctl -c /etc/evermodel_ops/supervisord.conf restart evermodel_ops-worker`，任务需重新提交 |
 | 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen spug:monitor` 非 0 即征兆。完整排查见 [`deploy/supervisor/README.md`](deploy/supervisor/README.md) §七 |
@@ -270,7 +308,7 @@ Grafana **12.4 起**，`?kiosk`（嵌入）模式会在**第一屏视口底部**
 
 | 侧 | 定义位置 | 变量 |
 |---|---|---|
-| 容器侧（数据层与网关） | `deploy/.env` | `EVERMODEL_MYSQL_ROOT_PASSWORD`、`EVERMODEL_MYSQL_PORT_MAP`（默认 3306）、`EVERMODEL_REDIS_PORT_MAP`（6379）、`EVERMODEL_NGINX_PORT_MAP`（80） |
+| 容器侧（数据层与网关） | `deploy/docker-compose.yaml` | 端口与初始密码直接写在 compose；生产部署后按文档修改并同步后端环境 |
 | 后端侧（5 个进程） | `backend/evermodel_ops/overrides.py`，或 supervisor 各 `[program:*]` 的 `environment=` 行 | 见下表 |
 
 | 后端环境变量 | 说明 |

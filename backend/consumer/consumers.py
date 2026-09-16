@@ -5,7 +5,8 @@ from django_redis import get_redis_connection
 from apps.host.models import Host
 from consumer.utils import BaseConsumer
 from libs.utils import str_decode
-from threading import Thread
+from threading import Event, Thread
+import socket
 import time
 import json
 
@@ -59,15 +60,21 @@ class SSHConsumer(BaseConsumer):
         self.id = None
         self.chan = None
         self.ssh = None
+        self.stop_event = Event()
+        self.thread = None
 
     def loop_read(self):
         is_ready, buf_size = False, 4096
-        while True:
-            data = self.chan.recv(buf_size)
-            if not data:
-                self.close(3333)
+        while not self.stop_event.is_set():
+            try:
+                data = self.chan.recv(buf_size)
+            except (OSError, EOFError, socket.error):
                 break
-            while self.chan.recv_ready():
+            if not data:
+                if not self.stop_event.is_set():
+                    self.close(3333)
+                break
+            while self.chan.recv_ready() and not self.stop_event.is_set():
                 data += self.chan.recv(buf_size)
             try:
                 text = data.decode()
@@ -84,20 +91,36 @@ class SSHConsumer(BaseConsumer):
 
     def receive(self, text_data=None, bytes_data=None):
         data = text_data or bytes_data
-        if data and self.chan:
-            data = json.loads(data)
-            # print('write: {!r}'.format(data))
-            resize = data.get('resize')
-            if resize and len(resize) == 2:
-                self.chan.resize_pty(*resize)
-            else:
-                self.chan.send(data['data'])
+        if not data or not self.chan:
+            return
+        try:
+            payload = json.loads(data)
+        except (TypeError, json.JSONDecodeError):
+            return self.close_with_message('终端请求格式错误。')
+        if not isinstance(payload, dict):
+            return self.close_with_message('终端请求格式错误。')
+        resize = payload.get('resize')
+        if resize is not None:
+            if (not isinstance(resize, (list, tuple)) or len(resize) != 2 or
+                    not all(isinstance(x, int) and 1 <= x <= 500 for x in resize)):
+                return self.close_with_message('终端尺寸参数错误。')
+            self.chan.resize_pty(*resize)
+            return
+        value = payload.get('data')
+        if isinstance(value, str):
+            try:
+                self.chan.send(value)
+            except (OSError, EOFError, socket.error):
+                self.stop_event.set()
 
     def disconnect(self, code):
+        self.stop_event.set()
         if self.chan:
             self.chan.close()
         if self.ssh:
             self.ssh.close()
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1)
 
     def init(self):
         self.id = self.scope['url_route']['kwargs']['id']
@@ -113,7 +136,8 @@ class SSHConsumer(BaseConsumer):
 
         self.chan = self.ssh.invoke_shell(term='xterm')
         self.chan.transport.set_keepalive(30)
-        Thread(target=self.loop_read).start()
+        self.thread = Thread(target=self.loop_read, daemon=True)
+        self.thread.start()
 
 
 class PubSubConsumer(BaseConsumer):

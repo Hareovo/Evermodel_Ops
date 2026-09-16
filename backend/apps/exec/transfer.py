@@ -19,6 +19,9 @@ import uuid
 import json
 import time
 import os
+import shutil
+import shlex
+from pathlib import Path
 
 
 class TransferView(View):
@@ -67,11 +70,12 @@ class TransferView(View):
                     fp.write(host.pkey or AppSetting.get('private_key'))
                     fp.flush()
                     target = f'{host.username}@{host.hostname}:{path}'
-                    command = f'sshfs -o ro -o ssh_command="ssh -p {host.port} -i {fp.name}" {target} {base_dir}'
-                    task = subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                    ssh_command = f'ssh -p {host.port} -i {fp.name}'
+                    command = ['sshfs', '-o', 'ro', '-o', f'ssh_command={ssh_command}', target, base_dir]
+                    task = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                     if task.returncode != 0:
-                        os.system(f'umount -f {base_dir} > /dev/null 2>&1; rm -rf {base_dir}')
-                        return json_response(error=task.stdout.decode())
+                        _cleanup_transfer_dir(base_dir, mounted=True)
+                        return json_response(error=task.stdout.decode(errors='replace'))
             else:
                 os.makedirs(base_dir)
                 index = 0
@@ -79,7 +83,13 @@ class TransferView(View):
                     file = request.FILES.get(f'file{index}')
                     if not file:
                         break
-                    with open(os.path.join(base_dir, file.name), 'wb') as f:
+                    filename = os.path.basename(file.name)
+                    if not filename or filename in ('.', '..'):
+                        return json_response(error='非法文件名')
+                    target = (Path(base_dir).resolve() / filename).resolve()
+                    if Path(base_dir).resolve() not in target.parents:
+                        return json_response(error='非法文件名')
+                    with open(target, 'wb') as f:
                         for chunk in file.chunks():
                             f.write(chunk)
                     index += 1
@@ -99,9 +109,21 @@ class TransferView(View):
             Argument('token', help='参数错误')
         ).parse(request.body)
         if error is None:
-            task = Transfer.objects.get(digest=form.token)
+            task = Transfer.objects.filter(digest=form.token, user=request.user).first()
+            if not task:
+                return json_response(error='未找到指定分发任务')
             Thread(target=_dispatch_sync, args=(task, get_request_language(request))).start()
         return json_response(error=error)
+
+
+def _cleanup_transfer_dir(path, mounted=False):
+    root = Path(settings.TRANSFER_DIR).resolve()
+    target = Path(path).resolve()
+    if root not in target.parents or target == root:
+        return
+    if mounted:
+        subprocess.run(['umount', '-f', str(target)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    shutil.rmtree(target, ignore_errors=True)
 
 
 def _dispatch_sync(task, language='zh'):
@@ -121,11 +143,7 @@ def _dispatch_sync(task, language='zh'):
                     t.token,
                     json.dumps({'key': t.key, 'status': -1, 'data': f'\x1b[31mException: {exc}\x1b[0m'})
                 )
-    if task.host_id:
-        command = f'umount -f {task.src_dir} && rm -rf {task.src_dir}'
-    else:
-        command = f'rm -rf {task.src_dir}'
-    subprocess.run(command, shell=True)
+    _cleanup_transfer_dir(task.src_dir, mounted=bool(task.host_id))
     close_old_connections()
 
 
@@ -138,10 +156,17 @@ def _do_sync(rds, task, host, language='zh'):
         fp.flush()
 
         flag = time.time()
-        options = '-azv --progress' if task.host_id else '-rzv --progress'
-        argument = f'{task.src_dir}/ {host.username}@{host.hostname}:{task.dst_dir}'
-        command = f'rsync {options} -h -e "ssh -p {host.port} -o StrictHostKeyChecking=no -i {fp.name}" {argument}'
-        task = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        options = ['-azv', '--progress'] if task.host_id else ['-rzv', '--progress']
+        dst_dir = task.dst_dir.strip()
+        if not dst_dir or any(char in dst_dir for char in '\r\n'):
+            raise ValueError('目标路径格式错误')
+        target = f'{host.username}@{host.hostname}:{dst_dir}'
+        command = [
+            'rsync', *options, '-h',
+            '-e', f'ssh -p {host.port} -o StrictHostKeyChecking=no -i {fp.name}',
+            f'{task.src_dir}/', target,
+        ]
+        task = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         message = b''
         while True:
             output = task.stdout.read(1)

@@ -9,6 +9,7 @@ from string import Template
 import string
 import random
 import json
+import ipaddress
 
 
 class EvermodelError(Exception):
@@ -153,5 +154,8 @@ def get_request_real_ip(headers: dict):
     x_real_ip = headers.get('x-forwarded-for')
     if not x_real_ip:
         x_real_ip = headers.get('x-real-ip', '')
-    x_real_ip = x_real_ip.split(',')[0]
-    return x_real_ip.split(':')[0]
+    x_real_ip = x_real_ip.split(',')[0].strip()
+    try:
+        return str(ipaddress.ip_address(x_real_ip))
+    except ValueError:
+        return x_real_ip

@@ -61,9 +61,9 @@ cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
 |---|---|---|
 | `EVERMODEL_MYSQL_HOST` | `127.0.0.1` | |
 | `EVERMODEL_MYSQL_PORT` | `3306` | 本地 Docker 映射常为 `13306` |
-| `EVERMODEL_MYSQL_DB` | `evermodel_ops` | 库名 |
+| `EVERMODEL_MYSQL_DB` | 未设置时 SQLite | 设置后使用 MySQL/MariaDB |
 | `EVERMODEL_MYSQL_USER` | `root` | |
-| `EVERMODEL_MYSQL_PASSWORD` | `evermodel_ops` | **生产必须改** |
+| `EVERMODEL_MYSQL_PASSWORD` | 无默认值 | compose 初始密码或已有实例 ALTER USER 后同步注入；生产必须使用强密码 |
 | `EVERMODEL_REDIS_HOST` / `PORT` | `127.0.0.1` / `6379` | |
 | `EVERMODEL_SECRET_KEY` | 无（落到代码里的开发用默认值） | **生产必须注入** |
 | `EVERMODEL_GRAFANA_URL` | 空 | 也可在「系统设置 / 监控大屏」界面里配 |

@@ -12,7 +12,8 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from pathlib import Path
 import time
-import os
+import shutil
+import subprocess
 
 
 def auto_run_by_day():
@@ -47,8 +48,12 @@ def auto_run_by_day():
         if transfer_root.exists():
             for item in transfer_root.iterdir():
                 if item.name != '.gitkeep':
-                    if item.stat().st_atime < timestamp:
-                        transfer_dir = item.absolute()
-                        os.system(f'umount -f {transfer_dir} > /dev/null 2>&1; rm -rf {transfer_dir}')
+                    if item.stat().st_mtime < timestamp and item.is_dir():
+                        transfer_dir = item.resolve()
+                        if transfer_root.resolve() not in transfer_dir.parents:
+                            continue
+                        subprocess.run(['umount', '-f', str(transfer_dir)], stdout=subprocess.DEVNULL,
+                                       stderr=subprocess.DEVNULL)
+                        shutil.rmtree(transfer_dir, ignore_errors=True)
     finally:
         connections.close_all()

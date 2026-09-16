@@ -19,7 +19,8 @@ class HandleExceptionMiddleware(MiddlewareMixin):
 
     def process_exception(self, request, exception):
         traceback.print_exc()
-        return json_response(error='Exception: %s' % exception)
+        message = str(exception) if settings.DEBUG else '服务器内部错误，请稍后重试'
+        return json_response(error=message)
 
 
 class TranslateMiddleware(MiddlewareMixin):

@@ -35,13 +35,11 @@ CREATE DATABASE IF NOT EXISTS `evermodel_ops`
 --      经 docker 端口映射连进来时来源 IP 是网桥网关（如 172.20.0.1），
 --      不匹配 root@'localhost'，会被拒。所以显式放行 root@'%'。
 --
---    ⚠️ 「用户名 root + 密码 evermodel_ops」是初始化默认值，**生产环境务必改强密码**，
---       并同步修改 backend/evermodel_ops/overrides.py（或 EVERMODEL_MYSQL_PASSWORD 环境变量）。
+--    Compose 首次初始化已按 MYSQL_ROOT_PASSWORD 创建 root@'%'.
+--    已有实例请先确认账号，再用管理员连接执行 ALTER USER 设置部署密码。
 -- ---------------------------------------------------------------------------
-CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED BY 'evermodel_ops';
+CREATE USER IF NOT EXISTS 'root'@'%';
 GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
--- 账号已存在时，把密码也同步成本脚本约定的值
-ALTER USER 'root'@'%' IDENTIFIED BY 'evermodel_ops';
 FLUSH PRIVILEGES;
 
 -- 若实例的 root@'localhost' 用的是 unix_socket 插件认证（部分 MariaDB 默认如此），

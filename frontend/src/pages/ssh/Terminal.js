@@ -13,8 +13,8 @@ import gStore from 'gStore';
 
 function WebSSH(props) {
   const container = useRef();
-  const [term] = useState(new Terminal());
-  const [fitPlugin] = useState(new FitAddon());
+  const [term] = useState(() => new Terminal());
+  const [fitPlugin] = useState(() => new FitAddon());
 
   useEffect(() => {
     term.loadAddon(fitPlugin);
@@ -34,27 +34,38 @@ function WebSSH(props) {
     term.open(container.current);
     term.write('WebSocket connecting ... ');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    let disposed = false;
+    let closeTimer;
     const socket = new WebSocket(`${protocol}//${window.location.host}/api/ws/ssh/${props.id}/?x-token=${X_TOKEN}`);
-    socket.onmessage = e => term.write(e.data)
-    socket.onopen = () => {
+    socket.onmessage = e => { if (!disposed) term.write(e.data) }
+    socket.onopen = () => { if (disposed) return;
       term.write('ok')
       term.focus();
       fitTerminal();
     };
     socket.onclose = e => {
-      setTimeout(() => term.write('\r\n\r\n\x1b[31mConnection is closed.\x1b[0m\r\n'), 200)
+      closeTimer = setTimeout(() => {
+        if (!disposed) term.write('\r\n\r\n\x1b[31mConnection is closed.\x1b[0m\r\n')
+      }, 200)
     };
-    term.onData(data => socket.send(JSON.stringify({data})));
-    term.onResize(({cols, rows}) => {
-      if (socket.readyState === 1) {
+    const dataDisposable = term.onData(data => {
+      if (!disposed && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({data}))
+    });
+    const resizeDisposable = term.onResize(({cols, rows}) => {
+      if (!disposed && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({resize: [cols, rows]}))
       }
     });
     window.addEventListener('resize', fitTerminal)
 
     return () => {
+      disposed = true;
+      clearTimeout(closeTimer);
       window.removeEventListener('resize', fitTerminal);
-      if (socket) socket.close()
+      dataDisposable.dispose();
+      resizeDisposable.dispose();
+      if (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING) socket.close();
+      term.dispose();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -67,21 +78,21 @@ function WebSSH(props) {
   }, [gStore.terminal])
 
   useEffect(() => {
-    if (props.vId === props.activeId) {
-      setTimeout(() => term.focus())
-    }
+    let timer;
+    if (props.vId === props.activeId) timer = setTimeout(() => term.focus());
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.activeId])
 
-  useLayoutEffect(fitTerminal)
+  useLayoutEffect(() => { fitTerminal(); });
 
   function fitTerminal() {
     if (props.vId === props.activeId) {
       const dims = fitPlugin.proposeDimensions();
-      if (!dims || !term || !dims.cols || !dims.rows) return;
+      if (!dims || !dims.cols || !dims.rows) return;
       if (term.rows !== dims.rows || term.cols !== dims.cols) {
-        term._core._renderService.clear();
         term.resize(dims.cols, dims.rows);
+        term.refresh(0, term.rows - 1);
       }
     }
   }

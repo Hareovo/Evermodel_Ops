@@ -1,6 +1,9 @@
 import django
-import sys
 import os
+import re
+import shutil
+import subprocess
+import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
@@ -9,33 +12,21 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "evermodel_ops.settings")
 django.setup()
 
 from django.conf import settings
-import subprocess
-import shutil
-import sys
-import os
-import re
 
 
 class Version:
     def __init__(self, version):
-        self.version = re.sub('[^0-9.]', '', version).split('.')
+        parts = re.sub(r'[^0-9.]', '', version).strip('.').split('.')
+        self.version = tuple(int(part or 0) for part in parts)
 
-    def __gt__(self, other):
+    def __lt__(self, other):
         if not isinstance(other, Version):
             raise TypeError('required type Version')
-        for v1, v2 in zip(self.version, other.version):
-            if int(v1) == int(v2):
-                continue
-            elif int(v1) > int(v2):
-                return True
-            else:
-                return False
-        return False
+        return self.version < other.version
 
 
 if __name__ == '__main__':
     old_version = Version(sys.argv[1])
-    now_version = Version(settings.EVERMODEL_VERSION)
     if old_version < Version('v3.0.2'):
         old_path = os.path.join(settings.BASE_DIR, 'repos')
         new_path = os.path.join(settings.REPOS_DIR)

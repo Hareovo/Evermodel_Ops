@@ -109,7 +109,9 @@ class TaskView(View):
             if form.cols and form.rows:
                 term = {'width': form.cols, 'height': form.rows}
             rds = get_redis_connection()
-            task = ExecHistory.objects.get(digest=form.token)
+            task = ExecHistory.objects.filter(digest=form.token, user=request.user).first()
+            if not task:
+                return json_response(error='未找到指定执行任务')
             for host in Host.objects.filter(id__in=json.loads(task.host_ids)):
                 data = dict(
                     key=host.id,

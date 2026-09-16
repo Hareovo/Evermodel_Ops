@@ -28,10 +28,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # 仅供本地开发的默认值（同时公开在仓库里，绝不可用于生产）。
 SECRET_KEY = os.environ.get('EVERMODEL_SECRET_KEY', 'dev-only-insecure-key-change-in-production')
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('EVERMODEL_DEBUG', 'false').lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = os.environ.get('EVERMODEL_ALLOWED_HOSTS', '127.0.0.1').split(',')
 
 # Application definition
 
@@ -65,53 +64,38 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+mysql_db = os.environ.get('EVERMODEL_MYSQL_DB')
+if mysql_db:
+    DATABASES = {'default': {
+        'ATOMIC_REQUESTS': True,
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': mysql_db,
+        'USER': os.environ.get('EVERMODEL_MYSQL_USER', 'root'),
+        'PASSWORD': os.environ.get('EVERMODEL_MYSQL_PASSWORD', ''),
+        'HOST': os.environ.get('EVERMODEL_MYSQL_HOST', '127.0.0.1'),
+        'PORT': os.environ.get('EVERMODEL_MYSQL_PORT', '3306'),
+        'OPTIONS': {'charset': 'utf8mb4', 'sql_mode': 'STRICT_TRANS_TABLES'},
+    }}
+else:
+    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 
-# ---------------------------------------------------------------------------
-# Redis socket 超时必须显式设为 None（重要，勿删）
-# redis-py 8.0 起把默认 socket_timeout 从 None 改成了 5s，而本项目的 Redis
-# 存在永久阻塞读（channel layer 的 BZPOPMIN 5s、runworker 的 BLPOP timeout=0、
-# schedule/monitor 的 BRPOP timeout=0），会被这个 5s 读超时打断，
-# 表现为 Web 终端连上几秒就断开、后台 worker 反复异常。详见 evermodel_ops/overrides.py。
-# ---------------------------------------------------------------------------
-REDIS_POOL_KWARGS = {
-    "socket_timeout": None,
-    "socket_connect_timeout": 10,
-}
+REDIS_HOST = os.environ.get('EVERMODEL_REDIS_HOST', '127.0.0.1')
+REDIS_PORT = int(os.environ.get('EVERMODEL_REDIS_PORT', '6379'))
+REDIS_POOL_KWARGS = {'socket_timeout': None, 'socket_connect_timeout': 10}
 
-CACHES = {
-    "default": {
-        # django_redis is required, the exec console uses get_redis_connection()
-        # to stream its output through redis lists.
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
-        "KEY_PREFIX": "spug",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-            # django_redis 的 SOCKET_TIMEOUT 选项只在值为真时生效，无法表达 None，
-            # 因此走 CONNECTION_POOL_KWARGS。
-            "CONNECTION_POOL_KWARGS": dict(REDIS_POOL_KWARGS),
-        }
-    }
-}
+CACHES = {'default': {
+    'BACKEND': 'django_redis.cache.RedisCache',
+    'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/1',
+    'KEY_PREFIX': 'spug',
+    'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': dict(REDIS_POOL_KWARGS)},
+}}
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            # dict 形式才能把 socket_timeout 透传给 redis 连接池。
-            "hosts": [dict(host="127.0.0.1", port=6379, **REDIS_POOL_KWARGS)],
-            "prefix": "spug:channel",
-            "capacity": 1000,
-            "expiry": 120,
-        },
-    },
-}
+CHANNEL_LAYERS = {'default': {
+    'BACKEND': 'channels_redis.core.RedisChannelLayer',
+    'CONFIG': {'hosts': [dict(host=REDIS_HOST, port=REDIS_PORT, **REDIS_POOL_KWARGS)],
+               'prefix': 'spug:channel', 'capacity': 1000, 'expiry': 120},
+}}
 
 TOKEN_TTL = 8 * 3600
 SCHEDULE_KEY = 'spug:schedule'
