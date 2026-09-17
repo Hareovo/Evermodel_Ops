@@ -85,7 +85,7 @@ REDIS_POOL_KWARGS = {'socket_timeout': None, 'socket_connect_timeout': 10}
 CACHES = {'default': {
     'BACKEND': 'django_redis.cache.RedisCache',
     'LOCATION': f'redis://{REDIS_HOST}:{REDIS_PORT}/1',
-    'KEY_PREFIX': 'spug',
+    'KEY_PREFIX': 'evermodel_ops',
     'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient',
                 'CONNECTION_POOL_KWARGS': dict(REDIS_POOL_KWARGS)},
 }}
@@ -93,15 +93,15 @@ CACHES = {'default': {
 CHANNEL_LAYERS = {'default': {
     'BACKEND': 'channels_redis.core.RedisChannelLayer',
     'CONFIG': {'hosts': [dict(host=REDIS_HOST, port=REDIS_PORT, **REDIS_POOL_KWARGS)],
-               'prefix': 'spug:channel', 'capacity': 1000, 'expiry': 120},
+               'prefix': 'evermodel_ops:channel', 'capacity': 1000, 'expiry': 120},
 }}
 
 TOKEN_TTL = 8 * 3600
-SCHEDULE_KEY = 'spug:schedule'
-SCHEDULE_WORKER_KEY = 'spug:schedule:worker'
-MONITOR_KEY = 'spug:monitor'
-MONITOR_WORKER_KEY = 'spug:monitor:worker'
-EXEC_WORKER_KEY = 'spug:exec:worker'
+SCHEDULE_KEY = 'evermodel_ops:schedule'
+SCHEDULE_WORKER_KEY = 'evermodel_ops:schedule:worker'
+MONITOR_KEY = 'evermodel_ops:monitor'
+MONITOR_WORKER_KEY = 'evermodel_ops:monitor:worker'
+EXEC_WORKER_KEY = 'evermodel_ops:exec:worker'
 TRANSFER_DIR = str(BASE_DIR / 'storage' / 'transfer')
 REPOS_DIR = str(BASE_DIR.parent.parent / 'repos')
 BUILD_DIR = os.path.join(REPOS_DIR, 'build')

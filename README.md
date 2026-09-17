@@ -202,7 +202,7 @@ docker exec evermodel-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD
 | 数据库连不上 | 容器没起 / 密码不一致 | `cd deploy && docker compose ps`；核对 supervisor 环境变量与 `overrides.py` |
 | Web 终端连上几秒断开 | redis-py 8 默认 socket 超时 | 配置里的 `REDIS_POOL_KWARGS socket_timeout: None` 不要删（已内置） |
 | 批量执行卡 `### Waiting for scheduling ...` | worker 没起（**不是脚本问题**） | `supervisorctl -c /etc/evermodel_ops/supervisord.conf restart evermodel_ops-worker`，任务需重新提交 |
-| 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen spug:monitor` 非 0 即征兆。完整排查见 [`deploy/supervisor/README.md`](deploy/supervisor/README.md) §七 |
+| 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen evermodel_ops:monitor` 非 0 即征兆。完整排查见 [`deploy/supervisor/README.md`](deploy/supervisor/README.md) §七 |
 
 ## 监控大屏（内嵌 Grafana）
 

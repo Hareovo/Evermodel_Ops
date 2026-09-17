@@ -141,7 +141,7 @@ def handle_login_record(request, username, login_type, error=None):
     user_agent = user_agents.parse(request.headers.get('User-Agent'))
     History.objects.create(
         username=username,
-        type=login_type,
+        type=login_type or 'default',
         ip=x_real_ip,
         agent=user_agent,
         is_success=False if error else True,

@@ -201,12 +201,12 @@ tail -f /data/evermodel_ops/backend/logs/worker.log
 > 不是脚本问题。查队列堆积情况：
 >
 > ```bash
-> redis-cli -n 1 llen spug:exec:worker
-> redis-cli -n 1 llen spug:schedule:worker
-> redis-cli -n 1 llen spug:monitor:worker
+> redis-cli -n 1 llen evermodel_ops:exec:worker
+> redis-cli -n 1 llen evermodel_ops:schedule:worker
+> redis-cli -n 1 llen evermodel_ops:monitor:worker
 > ```
 >
-> ⚠️ 查业务队列必须加 `-n 1`（DB 0 只有 channels 用的 `spug:channel:*`）。
+> ⚠️ 查业务队列必须加 `-n 1`（DB 0 只有 channels 用的 `evermodel_ops:channel:*`）。
 
 ### 4.4 `evermodel_ops-monitor`（监控检测）
 
@@ -225,8 +225,8 @@ tail -f /data/evermodel_ops/backend/logs/monitor.log
 > ```bash
 > # latest_run_time 为 NULL = 一次都没跑过
 > mysql -uroot -p -e "select id, name, latest_run_time from evermodel_ops.monitor_detection limit 10"
-> # Redis 里没有 spug:det:<id> 说明检测没被调度
-> redis-cli -n 1 keys 'spug:det:*'
+> # Redis 里没有 evermodel_ops:det:<id> 说明检测没被调度
+> redis-cli -n 1 keys 'evermodel_ops:det:*'
 > ```
 >
 > 钉钉/飞书告警是否送达：`notifies` 表**没有**新增 `title = '通知发送失败'` 即视为成功
@@ -244,7 +244,7 @@ supervisorctl -c /etc/evermodel_ops/supervisord.conf tail -f evermodel_ops-sched
 tail -f /data/evermodel_ops/backend/logs/scheduler.log
 ```
 
-> ⚠️ 与 `worker` 同理：**`scheduler` 启动时会 `delete spug:schedule`**，
+> ⚠️ 与 `worker` 同理：**`scheduler` 启动时会 `delete evermodel_ops:schedule`**，
 > 页面上增删改过的计划列表会被清掉，重启后以页面上的数据重新开始调度。
 > 若「改完计划不生效」，确认进程在跑，再重启一次这个服务。
 
@@ -292,9 +292,9 @@ curl -s -o /dev/null -w 'backend  %{http_code}\n' http://127.0.0.1:9001/account/
 curl -s -o /dev/null -w 'nginx    %{http_code}\n' http://127.0.0.1/api/account/login/
 
 # ④ 三个异步队列不该持续堆积（非 0 且不下降 = 对应进程没消费）
-redis-cli -n 1 llen spug:exec:worker
-redis-cli -n 1 llen spug:monitor
-redis-cli -n 1 llen spug:schedule
+redis-cli -n 1 llen evermodel_ops:exec:worker
+redis-cli -n 1 llen evermodel_ops:monitor
+redis-cli -n 1 llen evermodel_ops:schedule
 ```
 
 期望：5 个 `RUNNING`、9001/9002 都在听、`backend 401` + `nginx 200`、三个队列接近 0。

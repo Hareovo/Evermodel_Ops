@@ -120,7 +120,7 @@ def get_overview(request):
                 else:
                     data[key]['status'] = '10'
         if item.is_active:
-            for key, val in rds.hgetall(f'spug:det:{item.id}').items():
+            for key, val in rds.hgetall(f'evermodel_ops:det:{item.id}').items():
                 prefix, key = key.decode().split('_', 1)
                 if key in data:
                     val = int(val)
