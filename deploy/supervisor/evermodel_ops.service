@@ -18,7 +18,7 @@
 
 [Unit]
 Description=Evermodel Ops backend supervisor (5 processes)
-Documentation=file://__APP_DIR__/deploy/supervisor/README.md
+Documentation=file://__APP_DIR__/deploy/README.md
 After=network-online.target
 Wants=network-online.target
 ; 数据层（MySQL / Redis）若由 docker compose 提供，尽量等它先起来；

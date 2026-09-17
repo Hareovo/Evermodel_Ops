@@ -45,14 +45,14 @@
 
 | 我想… | 看这里 |
 |---|---|
-| 部署到服务器(从零到能登录) | [`deploy/INSTALL.md`](deploy/INSTALL.md) —— 完整 Ubuntu 部署指南 |
+| 部署到服务器(从零到能登录) | [`deploy/README.md`](deploy/README.md) —— 完整部署指南 |
 | 起数据层（MariaDB / Redis / nginx） | [`deploy/docker-compose.yaml`](deploy/docker-compose.yaml) |
-| 初始化数据库、建管理员 | [`deploy/db/README.md`](deploy/db/README.md) |
-| 托管后端 5 个进程 / 逐一启停 | [`deploy/supervisor/README.md`](deploy/supervisor/README.md) · `deploy/supervisor/manage.sh` |
+| 初始化数据库、建管理员 | [`deploy/README.md`](deploy/README.md) |
+| 托管后端 5 个进程 / 逐一启停 | [`deploy/README.md`](deploy/README.md) · `deploy/supervisor/manage.sh` |
 | 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
 | 打前端 / 后端发布包 | [`frontend/BUILD.md`](frontend/BUILD.md) · [`backend/BUILD.md`](backend/BUILD.md) |
 | 接通 Grafana 监控大屏 | 本文「监控大屏」 |
-| 排查故障 | 本文「故障速查」· [`deploy/supervisor/README.md`](deploy/supervisor/README.md) §七 |
+| 排查故障 | 本文「故障速查」· [`deploy/README.md`](deploy/README.md) §七 |
 
 > `docs/` 目录（源码架构说明、本机开发手册、逐文件二开改动记录）是**本地文档，已在 `.gitignore` 中**，
 > clone 下来看不到 —— 所以本 README 刻意不依赖它，上面每一条都指向仓库内的文件。
@@ -126,7 +126,7 @@ systemd: evermodel_ops.service                 ← 守护 supervisor 本体（�
 
 推荐部署结构:Docker Compose 运行 MariaDB、Redis、nginx;宿主机虚拟环境运行后端 5 个进程,由 supervisor + systemd 托管。Compose 不依赖 `.env` 文件,中间件数据保存在 `deploy/data/` 下。
 
-> 📄 **完整逐步部署指南见 [`deploy/INSTALL.md`](deploy/INSTALL.md)**,含依赖安装、中间件、初始化、supervisor 一键托管、前端发布、验证与常见问题。以下为命令速览。
+> 📄 **完整逐步部署指南见 [`deploy/README.md`](deploy/README.md)**,含依赖安装、中间件、初始化、supervisor 一键托管、前端发布、验证与常见问题。以下为命令速览。
 
 目标系统为 Ubuntu 20.04/22.04/24.04:
 
@@ -202,7 +202,7 @@ docker exec evermodel-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD
 | 数据库连不上 | 容器没起 / 密码不一致 | `cd deploy && docker compose ps`；核对 supervisor 环境变量与 `overrides.py` |
 | Web 终端连上几秒断开 | redis-py 8 默认 socket 超时 | 配置里的 `REDIS_POOL_KWARGS socket_timeout: None` 不要删（已内置） |
 | 批量执行卡 `### Waiting for scheduling ...` | worker 没起（**不是脚本问题**） | `supervisorctl -c /etc/evermodel_ops/supervisord.conf restart evermodel_ops-worker`，任务需重新提交 |
-| 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen evermodel_ops:monitor` 非 0 即征兆。完整排查见 [`deploy/supervisor/README.md`](deploy/supervisor/README.md) §七 |
+| 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen evermodel_ops:monitor` 非 0 即征兆。完整排查见 [`deploy/README.md`](deploy/README.md) §七 |
 
 ## 监控大屏（内嵌 Grafana）
 

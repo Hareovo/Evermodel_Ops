@@ -59,4 +59,4 @@ SELECT User AS `账号`, Host AS `允许来源`, plugin AS `认证插件`
 FROM mysql.user
 WHERE User = 'root';
 
-SELECT '建库完成，接着手工建表：manage.py updatedb（见 deploy/db/README.md）' AS `下一步`;
+SELECT '建库完成，接着手工建表：manage.py updatedb（见 deploy/README.md）' AS `下一步`;

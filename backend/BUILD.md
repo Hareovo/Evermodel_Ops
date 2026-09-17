@@ -70,7 +70,7 @@ cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
 
 ## 四、初始化数据库
 
-见 [`deploy/db/README.md`](../deploy/db/README.md)（含「建库」那一步，这里只列后两步）。一句话版：
+见 [`deploy/README.md`](../deploy/README.md)（含「建库」那一步，这里只列后两步）。一句话版：
 
 ```bash
 cd backend && source venv/bin/activate
@@ -89,7 +89,7 @@ python manage.py runserver 0.0.0.0:8000
 
 > ⚠️ `runserver` **只提供 API 与 WebSocket**。批量执行 / 任务计划 / 监控检测
 > 分别由 `runworker` / `runscheduler` / `runmonitor` 三个独立进程执行，
-> 光跑 `runserver` 会「能建任务但不执行」，详见 `deploy/supervisor/README.md`。
+> 光跑 `runserver` 会「能建任务但不执行」，详见 `deploy/README.md`。
 
 ## 六、打包发布（dist）
 
@@ -142,7 +142,7 @@ mkdir -p logs
 python manage.py updatedb
 python manage.py user add -u admin -p evermodel_ops -n 管理员 -s
 
-# 托管（5 个进程 + systemd 守护）—— 完整 5 步见 deploy/supervisor/README.md 第二节
+# 托管（5 个进程 + systemd 守护）—— 完整 5 步见 deploy/README.md 第二节
 APP_DIR=/data/evermodel_ops
 sudo apt install -y supervisor
 sudo mkdir -p "$APP_DIR/backend/logs" /etc/evermodel_ops/conf.d /var/log/evermodel_ops
