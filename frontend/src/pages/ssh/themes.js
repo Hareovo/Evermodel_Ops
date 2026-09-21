@@ -1,4 +1,26 @@
 export default {
+  // 与后台一致的深蓝主题（侧边栏 #0b1220 同色系）
+  evermodel: {
+    foreground: '#e2e8f0', background: '#0b1220', cursor: '#3b6ef6',
+    cursorAccent: '#0b1220',
+    selection: 'rgba(59, 110, 246, 0.35)',
+
+    black: '#1e293b', brightBlack: '#475569',
+
+    red: '#ef4444', brightRed: '#f87171',
+
+    green: '#22c55e', brightGreen: '#4ade80',
+
+    yellow: '#f59e0b', brightYellow: '#fbbf24',
+
+    blue: '#3b6ef6', brightBlue: '#60a5fa',
+
+    magenta: '#a855f7', brightMagenta: '#c084fc',
+
+    cyan: '#06b6d4', brightCyan: '#22d3ee',
+
+    white: '#cbd5e1', brightWhite: '#f8fafc'
+  },
   gray: {
     foreground: '#A9B7C6', background: '#2b2b2b', cursor: '#A9B7C6',
 

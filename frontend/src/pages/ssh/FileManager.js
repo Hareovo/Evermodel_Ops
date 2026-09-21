@@ -50,50 +50,60 @@ class FileManager extends React.Component {
     }
   }
 
-  columns = [{
-    title: t('名称'),
-    key: 'name',
-    render: info => info.kind === 'd' ? (
-      <div onClick={() => this.handleChdir(info.name, '1')} style={{cursor: 'pointer'}}>
-        <FolderOutlined style={{color: info.is_link ? '#008b8b' : '#2563fc'}}/>
-        <span style={{color: info.is_link ? '#008b8b' : '#2563fc', paddingLeft: 5}}>{info.name}</span>
-      </div>
-    ) : (
-      <React.Fragment>
-        <FileOutlined/>
-        <span style={{paddingLeft: 5}}>{info.name}</span>
-      </React.Fragment>
-    ),
-    ellipsis: true
-  }, {
-    title: t('大小'),
-    dataIndex: 'size',
-    align: 'right',
-    className: styles.fileSize,
-    width: 90
-  }, {
-    title: t('修改时间'),
-    dataIndex: 'date',
-    sorter: (a, b) => moment(a.date).unix() - moment(b.date).unix(),
-    width: 190
-  }, {
-    title: t('属性'),
-    dataIndex: 'code',
-    width: 110
-  }, {
-    title: t('操作'),
-    width: 100,
-    align: 'right',
-    key: 'action',
-    render: info => info.kind === '-' ? (
-      <Action>
-        <Action.Button className={styles.drawerBtn} icon={<DownloadOutlined/>}
-                       onClick={() => this.handleDownload(info.name)}/>
-        <Action.Button danger className={styles.drawerBtn} icon={<DeleteOutlined/>}
-                       onClick={() => this.handleDelete(info.name)}/>
-      </Action>
-    ) : null
-  }];
+  // 依据容器宽度动态决定各列可见性（抽屉/工作区宽度变化时调用方会重渲染）
+  // 名称列始终显示；其余列按宽度从最不重要的开始隐藏
+  get columns() {
+    const w = this.props.containerWidth || 900;
+    const showAction  = w >= 520;   // 操作（下载/删除）
+    const showSize    = w >= 620;   // 大小
+    const showCode    = w >= 720;   // 属性
+    const showDate    = w >= 820;   // 修改时间
+
+    return [{
+      title: t('名称'),
+      key: 'name',
+      render: info => info.kind === 'd' ? (
+        <div onClick={() => this.handleChdir(info.name, '1')} style={{cursor: 'pointer'}}>
+          <FolderOutlined style={{color: info.is_link ? '#06b6d4' : '#3b6ef6'}}/>
+          <span style={{color: info.is_link ? '#06b6d4' : '#3b6ef6', paddingLeft: 5, fontWeight: 500}}>{info.name}</span>
+        </div>
+      ) : (
+        <React.Fragment>
+          <FileOutlined/>
+          <span style={{paddingLeft: 5}}>{info.name}</span>
+        </React.Fragment>
+      ),
+      ellipsis: true
+    }, showSize && {
+      title: t('大小'),
+      dataIndex: 'size',
+      align: 'right',
+      className: styles.fileSize,
+      width: 90
+    }, showDate && {
+      title: t('修改时间'),
+      dataIndex: 'date',
+      sorter: (a, b) => moment(a.date).unix() - moment(b.date).unix(),
+      width: 190
+    }, showCode && {
+      title: t('属性'),
+      dataIndex: 'code',
+      width: 110
+    }, showAction && {
+      title: t('操作'),
+      width: 100,
+      align: 'right',
+      key: 'action',
+      render: info => info.kind === '-' ? (
+        <Action>
+          <Action.Button className={styles.drawerBtn} icon={<DownloadOutlined/>}
+                         onClick={() => this.handleDownload(info.name)}/>
+          <Action.Button danger className={styles.drawerBtn} icon={<DeleteOutlined/>}
+                         onClick={() => this.handleDelete(info.name)}/>
+        </Action>
+      ) : null
+    }].filter(Boolean);
+  }
 
   _kindSort = (item) => {
     return item.kind === 'd'
@@ -272,7 +282,7 @@ class FileManager extends React.Component {
           pagination={false}
           columns={this.columns}
           scroll={{y: scrollY}}
-          style={{fontFamily: 'Source Code Pro, Courier New, Courier, Monaco, monospace, PingFang SC, Microsoft YaHei'}}
+          style={{fontFamily: "'JetBrains Mono', 'Source Code Pro', Consolas, Menlo, Monaco, monospace, PingFang SC, Microsoft YaHei"}}
           dataSource={objects}/>
       </React.Fragment>
     )

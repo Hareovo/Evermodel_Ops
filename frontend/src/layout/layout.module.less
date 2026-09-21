@@ -1,74 +1,110 @@
-.header {
-  display: flex;
-  flex-direction: row;
-  padding: 0 12px 0 0;;
-  height: 48px;
-  line-height: 48px;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0, 21, 41, 0.08);
-  z-index: 2;
+/**
+ * 管理后台布局 —— 现代化改造
+ * 设计基调：深邃侧边栏 + 浅灰内容区 + 卡片化 + 大圆角 + 柔和阴影
+ */
 
-  .left {
-    flex: 1;
-  }
-
-  .terminal {
-    padding: 0 12px;
-    cursor: pointer;
-    line-height: 48px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.025);
-    }
-  }
-
-  .user {
-    .action {
-      cursor: pointer;
-      padding: 0 12px;
-      display: inline-block;
-      transition: all 0.3s;
-      height: 100%;
-    }
-
-    .action:hover {
-      background: rgba(0, 0, 0, 0.025);
-    }
-  }
-
-  .trigger {
-    cursor: pointer;
-    transition: all 0.3s, padding 0s;
-    padding: 0 12px;
-  }
-
-  .trigger:hover {
-    background: rgba(0, 0, 0, 0.025);
-  }
-}
-
-.content {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 24px 24px 0;
-  overflow-y: scroll;
-}
-
-.content::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
+/* ==================== 侧边栏 ==================== */
 .sider {
   height: 100%;
-  width: 208px;
+  width: 216px;
   min-height: 100vh;
-  box-shadow: 2px 0 8px 0 rgba(29, 35, 41, 0.05);
   overflow: hidden;
+  position: relative;
+  // 深色渐变 + 轻微蓝紫倾向，比纯黑更有质感
+  background: linear-gradient(180deg, #0d1526 0%, #0b1220 60%, #090f1b 100%) !important;
+  // 细高光描边，分割更精致
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+              4px 0 18px -6px rgba(2, 6, 23, 0.5);
+  z-index: 3;
+
+  // 顶部柔光装饰
+  &::before {
+    content: "";
+    position: absolute;
+    top: -60px;
+    left: -40px;
+    width: 220px;
+    height: 180px;
+    background: radial-gradient(closest-side, rgba(59, 110, 246, 0.22), transparent);
+    pointer-events: none;
+  }
+
+  :global(.ant-layout-sider-children) {
+    background: transparent;
+  }
+
+  :global(.ant-menu) {
+    background: transparent;
+  }
+
+  // 菜单项：圆角化、留白、hover 高亮
+  // 注意：必须带上 .ant-menu-dark 提高优先级，否则会被 antd 自带的
+  // `.ant-menu-dark .ant-menu-item:hover` 规则盖掉，表现为 hover 无高亮。
+  :global(.ant-menu-dark .ant-menu-item),
+  :global(.ant-menu-dark .ant-menu-submenu-title) {
+    margin: 4px 10px !important;
+    width: calc(100% - 20px) !important;
+    border-radius: 8px !important;
+    height: 42px;
+    line-height: 42px;
+    color: rgba(226, 232, 240, 0.75);
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  // hover 高亮：只对「未选中」的项生效；
+  // 已选中项 hover 时保持实心渐变蓝，不被半透明浅蓝覆盖（不变浅）。
+  :global(.ant-menu-dark .ant-menu-item:not(.ant-menu-item-selected):hover),
+  :global(.ant-menu-dark .ant-menu-item:not(.ant-menu-item-selected).ant-menu-item-active),
+  :global(.ant-menu-dark .ant-menu-submenu-title:hover),
+  :global(.ant-menu-dark .ant-menu-submenu-active .ant-menu-submenu-title) {
+    color: #fff !important;
+    background: rgba(59, 110, 246, 0.22) !important;
+  }
+
+  // 选中项：实心渐变蓝（优先级最高，hover 时也保持）
+  :global(.ant-menu-dark .ant-menu-item-selected),
+  :global(.ant-menu-dark .ant-menu-item-selected:hover),
+  :global(.ant-menu-dark .ant-menu-item-selected.ant-menu-item-active) {
+    background: linear-gradient(90deg, #3b6ef6, #2f59d6) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 14px -6px rgba(59, 110, 246, 0.6);
+    font-weight: 500;
+  }
+
+  :global(.ant-menu-submenu-selected > .ant-menu-submenu-title),
+  :global(.ant-menu-submenu-open > .ant-menu-submenu-title) {
+    color: #fff !important;
+  }
+
+  :global(.ant-menu-sub) {
+    background: rgba(255, 255, 255, 0.02) !important;
+    border-radius: 8px;
+    margin: 0 10px;
+    padding: 4px 0;
+
+    :global(.ant-menu-item) {
+      margin: 2px 6px !important;
+      width: calc(100% - 12px) !important;
+      height: 38px;
+      line-height: 38px;
+      padding-left: 38px !important;
+    }
+  }
+
+  // 子菜单展开态本身的背景（防止 antd 默认深色盖掉上面的圆角容器）
+  :global(.ant-menu-dark .ant-menu-sub),
+  :global(.ant-menu.ant-menu-dark .ant-menu-sub) {
+    background: rgba(255, 255, 255, 0.03) !important;
+  }
+
+  :global(.ant-menu-inline),
+  :global(.ant-menu-vertical) {
+    border-right: none !important;
+  }
+
+  :global(.ant-menu-item)::after {
+    display: none !important;  // 移除默认右侧选中条，使用整卡高亮
+  }
 
   .menus {
     overflow: auto;
@@ -85,19 +121,142 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    // logo 区下方细分割线
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 18px;
+      right: 18px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.25), transparent);
+    }
   }
 
   .logo img {
-    height: 30px;
+    height: 28px;
     flex: none;
+    filter: drop-shadow(0 2px 6px rgba(59, 110, 246, 0.4));
   }
 
   .logoText {
     margin-left: 10px;
-    color: #fff;
-    font-size: 16px;
+    color: #f1f5f9;
+    font-size: 15px;
     font-weight: 600;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     white-space: nowrap;
   }
+}
+
+// 折叠态
+:global(.ant-layout-sider-collapsed) {
+  :global(.ant-menu-item),
+  :global(.ant-menu-submenu-title) {
+    margin: 4px 8px !important;
+    width: calc(100% - 16px) !important;
+  }
+}
+
+/* 内层 Layout：必须显式声明纵向排列。
+ * antd 4 会给任何「祖先含 Sider」的 .ant-layout 自动加 flex-direction: row，
+ * 这一规则对嵌套的内层 Layout 也会命中，导致 Header 与 Content 横排，
+ * Header 被压成一条竖向窄条（看着像"一条长白条"）。 */
+.mainLayout {
+  flex-direction: column !important;
+}
+
+/* ==================== 顶部 Header ==================== */
+.header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 0 12px !important;   // 覆盖 antd 默认的 0 50px，否则 flex 子元素被压成细条
+  height: 56px;
+  line-height: 56px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  box-shadow: 0 1px 0 rgba(226, 232, 240, 0.9),
+              0 8px 24px -16px rgba(15, 23, 42, 0.08);
+  z-index: 2;
+  position: relative;
+
+  .left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .terminal,
+  .trigger {
+    cursor: pointer;
+    line-height: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 36px;
+    min-width: 36px;
+    margin: 0 4px;
+    border-radius: 8px;
+    color: #475569;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(59, 110, 246, 0.08);
+      color: #3b6ef6;
+    }
+  }
+
+  .trigger {
+    font-size: 16px;
+  }
+
+  .user {
+    display: flex;
+    align-items: center;
+    margin-right: 8px;
+
+    .action {
+      cursor: pointer;
+      padding: 4px 12px 4px 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      border-radius: 999px;
+      color: #334155;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+
+      :global(.ant-avatar) {
+        box-shadow: 0 0 0 2px rgba(59, 110, 246, 0.15);
+      }
+    }
+
+    .action:hover {
+      background: rgba(59, 110, 246, 0.06);
+      border-color: rgba(59, 110, 246, 0.15);
+      color: #1e293b;
+    }
+  }
+}
+
+/* ==================== 内容区 ==================== */
+.content {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 20px 0;
+  overflow-y: scroll;
+  background:
+    radial-gradient(1200px 500px at 100% -10%, rgba(59, 110, 246, 0.04), transparent 60%),
+    #f2f4f7;
+}
+
+.content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }

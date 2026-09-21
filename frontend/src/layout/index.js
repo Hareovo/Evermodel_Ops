@@ -40,7 +40,7 @@ export default function () {
   return (
     <Layout>
       <Sider collapsed={collapsed}/>
-      <Layout style={{height: '100vh'}}>
+      <Layout className={styles.mainLayout} style={{height: '100vh'}}>
         <Header collapsed={collapsed} toggle={() => setCollapsed(!collapsed)}/>
         <Layout.Content className={styles.content} id="app-container">
           <Switch>

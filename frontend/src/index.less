@@ -2,27 +2,143 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, Helvetica Neue, PingFang SC, Microsoft YaHei, Source Han Sans SC, Noto Sans CJK SC, WenQuanYi Micro Hei, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica Neue, PingFang SC,
+    'Hiragino Sans GB', Microsoft YaHei, 'Source Han Sans SC', 'Noto Sans CJK SC', WenQuanYi Micro Hei, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
+  background: #f2f4f7;
+  color: rgba(30, 41, 59, 0.88);
 }
 
 code {
-  font-family: Source Code Pro, Menlo, Monaco, Consolas, Courier New, monospace, Courier, PingFang SC, Microsoft YaHei;
+  font-family: 'JetBrains Mono', 'Source Code Pro', Menlo, Monaco, Consolas, 'Courier New', monospace, Courier, PingFang SC, Microsoft YaHei;
 }
 
+/* ============ 全局滚动条（内容区以外的场景，如 Modal/抽屉/下拉） ============ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.45);
+  background-clip: padding-box;
+}
+
+/* ============ antd 组件级微调（主题变量之外的精修） ============ */
 .ant-form-item-extra {
   font-size: 13px;
   padding-top: 6px;
 }
 
-/* Common CSS style */
+/* 按钮：更柔和的阴影与悬浮态 */
+.ant-btn-primary {
+  box-shadow: 0 2px 6px -2px rgba(59, 110, 246, 0.4);
+  font-weight: 500;
+
+  &:hover,
+  &:focus {
+    box-shadow: 0 4px 12px -2px rgba(59, 110, 246, 0.5);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.ant-btn:not(.ant-btn-primary):not(.ant-btn-link):not(.ant-btn-text) {
+  &:hover {
+    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.1);
+  }
+}
+
+/* 输入类控件 hover 时更轻的过渡 */
+.ant-input,
+.ant-select:not(.ant-select-customize-input) .ant-select-selector,
+.ant-input-number,
+.ant-picker {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 卡片默认去掉边框，用阴影承载层次 */
+.ant-card {
+  border-radius: 10px;
+  border-color: rgba(226, 232, 240, 0.7);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px -4px rgba(15, 23, 42, 0.04);
+}
+
+.ant-card-head {
+  border-bottom-color: #eef2f6;
+  font-weight: 600;
+}
+
+/* Modal 圆角与阴影 */
+.ant-modal-content {
+  border-radius: 12px;
+  box-shadow: 0 20px 48px -12px rgba(15, 23, 42, 0.25);
+}
+.ant-modal-header {
+  border-radius: 12px 12px 0 0;
+  border-bottom-color: #eef2f6;
+}
+
+/* 抽屉圆角 */
+.ant-drawer-content {
+  border-radius: 12px 0 0 12px;
+}
+
+/* 下拉菜单 */
+.ant-dropdown-menu {
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.16);
+}
+.ant-dropdown-menu-item,
+.ant-dropdown-menu-submenu-title {
+  border-radius: 6px;
+}
+
+/* Message / Notification 圆角 */
+.ant-message-notice-content {
+  border-radius: 10px;
+  box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.16);
+}
+.ant-notification-notice {
+  border-radius: 10px;
+}
+
+/* Tabs 下划线风格 */
+.ant-tabs-top > .ant-tabs-nav::before {
+  border-bottom-color: #eef2f6;
+}
+
+/* Tag 更轻量 */
+.ant-tag {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* ============ Common CSS style ============ */
 .none {
   display: none;
 }
 
 .btn {
-  color: #2563fc;
+  color: #3b6ef6;
   cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.75;
+  }
 }

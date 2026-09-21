@@ -1,13 +1,35 @@
+/**
+ * Web Terminal 现代化样式
+ * 与主后台统一：深色侧边栏 + 浅色工作区 + 大圆角 + 柔和阴影
+ */
+
 .container {
   display: flex;
   min-height: 100vh;
+  background: #f2f4f7;
 
+  /* ==================== 左侧主机树（深色） ==================== */
   .sider {
     display: flex;
     flex-direction: column;
     width: 280px;
-    background-color: #fafafa;
     position: relative;
+    background: linear-gradient(180deg, #0d1526 0%, #0b1220 60%, #090f1b 100%);
+    box-shadow: 1px 0 0 rgba(255, 255, 255, 0.04) inset,
+                4px 0 18px -6px rgba(2, 6, 23, 0.5);
+    z-index: 3;
+
+    // 顶部柔光
+    &::before {
+      content: "";
+      position: absolute;
+      top: -50px;
+      left: -30px;
+      width: 200px;
+      height: 160px;
+      background: radial-gradient(closest-side, rgba(59, 110, 246, 0.22), transparent);
+      pointer-events: none;
+    }
 
     .split {
       position: absolute;
@@ -15,102 +37,248 @@
       height: 100vh;
       right: -4px;
       cursor: ew-resize;
+      transition: background 0.2s;
+
+      &:hover {
+        background: linear-gradient(90deg, transparent, rgba(59, 110, 246, 0.35), transparent);
+      }
     }
 
     .logo {
-      height: 42px;
+      height: 56px;
       display: flex;
       justify-content: center;
       align-items: center;
-      background-color: #2563fc;
+      background: transparent;
+      position: relative;
+      margin-bottom: 8px;
+
+      // 底部细分割线
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 18px;
+        right: 18px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.25), transparent);
+      }
 
       img {
-        height: 28px;
+        height: 26px;
+        filter: drop-shadow(0 2px 6px rgba(59, 110, 246, 0.4));
+        transition: transform 0.2s ease;
+      }
+
+      &:hover img {
+        transform: scale(1.04);
       }
     }
 
     .hosts {
-      box-shadow: 2px 2px 2px #e0e0e0;
+      box-shadow: none;
+      padding: 0 10px;
+      position: relative;
 
       :global(.ant-tree-node-content-wrapper) {
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        border-radius: 6px;
+        transition: all 0.2s;
+
+        &:hover {
+          background: rgba(59, 110, 246, 0.18) !important;
+        }
+      }
+
+      :global(.ant-tree-node-content-wrapper.ant-tree-node-selected) {
+        background: linear-gradient(90deg, #3b6ef6, #2f59d6) !important;
+        color: #fff !important;
+        box-shadow: 0 4px 12px -4px rgba(59, 110, 246, 0.5);
       }
 
       :global(.ant-tree) {
-        background-color: #fafafa;
-        height: calc(100vh - 98px);
+        background: transparent;
+        color: rgba(226, 232, 240, 0.8);
+        height: calc(100vh - 120px);
         overflow: auto;
+        padding: 4px 0;
+      }
+
+      :global(.ant-tree .ant-tree-node-content-wrapper .ant-tree-title) {
+        color: inherit;
+      }
+
+      :global(.ant-tree-switcher) {
+        color: rgba(148, 163, 184, 0.7);
+        background: transparent !important;
+      }
+
+      :global(.ant-tree-iconEle) {
+        color: rgba(148, 163, 184, 0.85);
+      }
+
+      :global(.ant-tree-treenode) {
+        padding: 2px 0;
+      }
+
+      :global(.ant-tree-treenode-selected .ant-tree-switcher),
+      :global(.ant-tree-treenode-selected .ant-tree-iconEle) {
+        color: #fff;
+      }
+
+      // 树滚动条
+      :global(.ant-tree)::-webkit-scrollbar {
+        width: 4px;
+      }
+      :global(.ant-tree)::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.25);
+        border-radius: 4px;
       }
 
       .search {
-        margin: 12px 10px;
-        width: calc(100% - 60px);
+        margin: 8px 0 12px;
+        width: calc(100% - 42px);
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(148, 163, 184, 0.15);
+        border-radius: 8px;
+        color: #e2e8f0;
+        transition: all 0.2s;
+
+        :global(.ant-input) {
+          background: transparent;
+          color: #e2e8f0;
+
+          &::placeholder {
+            color: rgba(148, 163, 184, 0.5);
+          }
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(59, 110, 246, 0.4);
+        }
+
+        &:focus,
+        &:global(.ant-input-affix-wrapper-focused) {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: #3b6ef6;
+          box-shadow: 0 0 0 3px rgba(59, 110, 246, 0.15);
+        }
+      }
+
+      // 刷新按钮
+      :global(.ant-btn-link) {
+        color: rgba(148, 163, 184, 0.8);
+        transition: all 0.2s;
+
+        &:hover {
+          color: #3b6ef6;
+        }
       }
     }
   }
 
+  /* ==================== 右侧工作区 ==================== */
   .content {
     flex: 1;
     display: flex;
     flex-direction: column;
-    background: #eeeeee;
+    background: #f2f4f7;
+    min-width: 0;
 
     .tips {
       position: absolute;
-      top: 12px;
-      left: 12px;
+      top: 14px;
+      left: 16px;
       font-size: 12px;
-      color: #666;
+      color: #94a3b8;
+      letter-spacing: 0.2px;
     }
 
-    .fig {
-      flex: 1;
-      background-color: #2b2b2b;
-      color: #A9B7C6;
-      margin: 12px;
-      padding-top: 200px;
-      text-align: center;
-      border-radius: 6px;
-    }
-
+    // 空状态 banner（ASCII art）
+    .fig,
     .fig2 {
       flex: 1;
-      background-color: #fff;
-      color: #2b2b2b;
-      margin: 12px;
-      padding-top: 200px;
+      margin: 16px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       text-align: center;
-      border-radius: 6px;
+      border-radius: 14px;
+      font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, Menlo, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      letter-spacing: 0.5px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+                  0 8px 24px -8px rgba(15, 23, 42, 0.08);
+      overflow: auto;
+    }
+
+    // SSH 模式：深色终端风
+    .fig {
+      background: linear-gradient(135deg, #0d1526 0%, #11192e 60%, #0a0f1c 100%);
+      color: #6ee7b7;
+      text-shadow: 0 0 8px rgba(110, 231, 183, 0.4);
+      border: 1px solid rgba(59, 110, 246, 0.15);
+    }
+
+    // 文件管理模式：浅色卡片
+    .fig2 {
+      background: #fff;
+      color: #475569;
+      border: 1px solid rgba(226, 232, 240, 0.8);
     }
 
     .tabRender {
       user-select: none;
       padding: 8px 8px 8px 16px;
       margin: 0 -8px 0 -16px;
-      color: #2563fc;
+      color: #475569;
+      font-weight: 500;
+      transition: color 0.2s;
+
+      &:hover {
+        color: #3b6ef6;
+      }
     }
 
     .fileManger {
       margin: 12px;
-      padding: 12px;
-      border-radius: 6px;
+      padding: 16px;
+      border-radius: 12px;
       background: #fff;
-      height: calc(100vh - 66px);
+      height: calc(100vh - 70px);
+      border: 1px solid rgba(226, 232, 240, 0.7);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+                  0 4px 12px -4px rgba(15, 23, 42, 0.04);
     }
 
     .setting {
       cursor: pointer;
-      padding-right: 6px;
-      margin-right: 6px;
-      color: #fa8c16;
+      padding: 4px;
+      margin-right: 8px;
+      color: #f59e0b;
+      border-radius: 6px;
+      transition: all 0.2s;
+
+      &:hover {
+        background: rgba(245, 158, 11, 0.12);
+        transform: rotate(15deg);
+      }
     }
 
+    /* ============ Tabs 栏 ============ */
     :global(.ant-tabs-nav) {
-      height: 42px;
+      height: 46px;
       margin: 0;
       padding-left: 12px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: saturate(180%) blur(12px);
+      -webkit-backdrop-filter: saturate(180%) blur(12px);
+      box-shadow: 0 1px 0 rgba(226, 232, 240, 0.9);
     }
 
     :global(.ant-tabs-nav:before) {
@@ -118,42 +286,184 @@
     }
 
     :global(.ant-tabs-tab) {
-      border: none;
+      border: 1px solid rgba(226, 232, 240, 0.8) !important;
       background: #fff;
+      border-radius: 8px 8px 0 0 !important;
+      margin-right: 4px;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #3b6ef6;
+        border-color: rgba(59, 110, 246, 0.3) !important;
+      }
     }
 
     :global(.ant-tabs-tab-active) {
-      border-bottom: 2px solid #2563fc !important;
-      transition: unset;
+      background: linear-gradient(180deg, #fff, #f8fafc) !important;
+      border-bottom: 2px solid #3b6ef6 !important;
+      border-color: rgba(59, 110, 246, 0.3) !important;
+
+      :global(.ant-tabs-tab-btn) {
+        color: #3b6ef6 !important;
+        font-weight: 600;
+      }
+    }
+
+    // tab 关闭按钮
+    :global(.ant-tabs-tab-remove) {
+      color: #94a3b8;
+      border-radius: 4px;
+      transition: all 0.15s;
+
+      &:hover {
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+      }
+    }
+
+    // 新增 tab 按钮
+    :global(.ant-tabs-nav-add) {
+      border-radius: 8px !important;
+      border-color: rgba(226, 232, 240, 0.8) !important;
+      color: #64748b;
+      transition: all 0.2s;
+
+      &:hover {
+        color: #3b6ef6;
+        border-color: rgba(59, 110, 246, 0.4) !important;
+      }
     }
 
     :global(.ant-tabs-content) {
-      background: #eeeeee;
+      background: #f2f4f7;
+    }
+
+    :global(.ant-tabs-nav-operations) {
+      background: transparent;
+    }
+
+    // tabBarExtraContent 按钮
+    :global(.ant-tabs-extra-content) {
+      display: flex;
+      align-items: center;
+      padding-right: 12px;
+
+      :global(.ant-btn-link) {
+        color: #475569;
+        font-weight: 500;
+
+        &:hover:not(:disabled) {
+          color: #3b6ef6;
+        }
+      }
     }
   }
 }
 
+/* ==================== 终端容器 ==================== */
 .terminal {
   margin: 12px;
 
   :global(.xterm) {
-    padding: 10px 0 6px 10px;
-    height: calc(100vh - 66px);
+    padding: 12px 0 8px 12px;
+    height: calc(100vh - 70px);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04),
+                0 12px 32px -8px rgba(15, 23, 42, 0.12);
   }
 
   :global(.xterm-viewport) {
-    border-radius: 6px;
+    border-radius: 12px;
+
+    &::-webkit-scrollbar {
+      width: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
+    }
   }
 }
-
 
 .fileSize {
   padding-right: 24px !important;
 }
 
+/* 文件管理器表格微调：表头灰底、行 hover 浅蓝，与后台表格统一 */
+.fileManger,
+.drawerContainer {
+  :global(.ant-table-thead > tr > th) {
+    background: #f8fafc;
+    color: rgba(51, 65, 85, 0.75);
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid #eef2f6;
+  }
+
+  :global(.ant-table-tbody > tr > td) {
+    border-bottom: 1px solid #f4f7fa;
+  }
+
+  :global(.ant-table-tbody > tr:hover > td) {
+    background: #f6f9ff !important;
+  }
+}
+
+/* ==================== 抽屉 ==================== */
 .drawerContainer {
   :global(.ant-drawer-body) {
-    padding: 10px 16px;
+    padding: 14px 18px;
+    background: #f8fafc;
+    position: relative;
+  }
+
+  :global(.ant-drawer-header) {
+    background: #fff;
+    border-bottom: 1px solid #eef2f6;
+    padding: 14px 18px;
+  }
+
+  :global(.ant-drawer-title) {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  :global(.ant-drawer-content) {
+    border-radius: 12px 0 0 12px;
+    overflow: visible;
+  }
+}
+
+// 抽屉左缘拖拽手柄
+.drawerSplit {
+  position: absolute;
+  top: 0;
+  left: -6px;
+  width: 12px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 10;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 5px;
+    width: 2px;
+    height: 100%;
+    background: transparent;
+    transition: background 0.2s;
+  }
+
+  &:hover::before {
+    background: rgba(59, 110, 246, 0.5);
   }
 }
 
@@ -161,8 +471,12 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-  height: 24px;
+  margin-bottom: 14px;
+  height: 28px;
+  padding: 4px 8px;
+  background: #fff;
+  border-radius: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.7);
 
   .action {
     display: flex;
@@ -179,14 +493,19 @@
 
   .input {
     width: 60%;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-family: 'JetBrains Mono', Consolas, Menlo, monospace;
   }
 
   .edit {
     display: none;
-    color: #2563fcbb;
-    margin-left: 24px;
+    color: #3b6ef6;
+    margin-left: 20px;
     cursor: pointer;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 0.75;
+    }
   }
 
   .progress {
@@ -199,20 +518,27 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-right: 24px;
+    margin-right: 20px;
   }
 
   :global(.ant-breadcrumb-separator) {
     margin: 0 4px;
-    color: rgba(0, 0, 0, 0.85);
+    color: rgba(51, 65, 85, 0.55);
   }
 
   :global(.ant-breadcrumb-link) {
-    color: rgba(0, 0, 0, 0.85);
+    color: #334155;
+    font-weight: 500;
   }
 }
 
 .drawerBtn {
   height: 22px;
   width: 22px;
+  border-radius: 6px;
+  transition: all 0.2s;
+
+  &:hover {
+    background: rgba(59, 110, 246, 0.08);
+  }
 }

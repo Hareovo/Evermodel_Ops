@@ -11,10 +11,10 @@ import gStore from 'gStore';
 import css from './setting.module.less'
 
 function Setting(props) {
-  const [theme, setTheme] = useState('dark')
-  const [styles, setStyles] = useState(themes['dark'])
-  const [fontSize, setFontSize] = useState(14)
-  const [fontFamily, setFontFamily] = useState('Courier')
+  const [theme, setTheme] = useState('evermodel')
+  const [styles, setStyles] = useState(themes['evermodel'])
+  const [fontSize, setFontSize] = useState(15)
+  const [fontFamily, setFontFamily] = useState('JetBrains Mono')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -51,7 +51,9 @@ function Setting(props) {
         <Form.Item label={t('字体大小')}>
           <Select value={fontSize} placeholder={t('请选择字体大小')} onChange={v => setFontSize(v)}>
             <Select.Option value={12}>12</Select.Option>
+            <Select.Option value={13}>13</Select.Option>
             <Select.Option value={14}>14</Select.Option>
+            <Select.Option value={15}>15</Select.Option>
             <Select.Option value={16}>16</Select.Option>
             <Select.Option value={18}>18</Select.Option>
             <Select.Option value={20}>20</Select.Option>
@@ -59,6 +61,7 @@ function Setting(props) {
         </Form.Item>
         <Form.Item label={t('字体名称')}>
           <Select value={fontFamily} placeholder={t('请选择字体')} onChange={v => setFontFamily(v)}>
+            <Select.Option value="JetBrains Mono">JetBrains Mono</Select.Option>
             <Select.Option value="Courier">Courier</Select.Option>
             <Select.Option value="Consolas">Consolas</Select.Option>
             <Select.Option value="DejaVu Sans Mono">DejaVu Sans Mono</Select.Option>

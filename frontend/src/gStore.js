@@ -10,10 +10,10 @@ import themes from 'pages/ssh/themes';
 class Store {
   isReady = false;
   @observable terminal = {
-    fontSize: 16,
-    fontFamily: 'Courier',
-    theme: 'dark',
-    styles: themes['dark']
+    fontSize: 15,
+    fontFamily: 'JetBrains Mono, Source Code Pro, Menlo, Monaco, Consolas, Courier New, monospace',
+    theme: 'evermodel',
+    styles: themes['evermodel']
   };
 
   _handleSettings = (res) => {
@@ -23,8 +23,8 @@ class Store {
       if (styles) {
         terminal.styles = styles
       } else {
-        terminal.styles = themes['dark']
-        terminal.theme = 'dark'
+        terminal.styles = themes['evermodel']
+        terminal.theme = 'evermodel'
       }
       this.terminal = terminal
     }

@@ -30,6 +30,8 @@ import LogoEvermodelText from 'layout/logo-evermodel-white.png';
 import lds from 'lodash';
 
 let posX = 0
+let drawerPosX = 0
+let drawerStartWidth = 900
 
 function WebSSH(props) {
   const [visible, setVisible] = useState(false);
@@ -43,6 +45,7 @@ function WebSSH(props) {
   const [activeId, setActiveId] = useState();
   const [hostId, setHostId] = useState();
   const [width, setWidth] = useState(280);
+  const [drawerWidth, setDrawerWidth] = useState(900);
   const [sshMode] = useState(true)
 
   useEffect(() => {
@@ -170,6 +173,24 @@ function WebSSH(props) {
     if (posX) {
       setWidth(e.pageX);
     }
+    if (drawerPosX) {
+      // 抽屉从右往左拉，宽度 = 起始宽 + (起点 x - 当前 x)
+      const next = drawerStartWidth + (drawerPosX - e.pageX);
+      // 限制最小/最大宽度
+      const clamped = Math.max(480, Math.min(next, window.innerWidth - 320));
+      setDrawerWidth(clamped);
+    }
+  }
+
+  function handleMouseUp() {
+    posX = 0;
+    drawerPosX = 0;
+  }
+
+  function startDrawerResize(e) {
+    drawerPosX = e.pageX;
+    drawerStartWidth = drawerWidth;
+    e.preventDefault();
   }
 
   function handeTabAction(action, host, e) {
@@ -224,7 +245,7 @@ function WebSSH(props) {
     '|__/|__/ \\___//_.___/   \\__/ \\___//_/   /_/ /_/ /_//_//_/ /_/ \\__,_//_/\n'
 
   return (
-    <div className={styles.container} onMouseUp={() => posX = 0} onMouseMove={handleMouseMove}>
+    <div className={styles.container} onMouseUp={handleMouseUp} onMouseMove={handleMouseMove}>
       <div className={styles.sider} style={{width}}>
         <a className={styles.logo} href="/host" target="_blank">
           <img src={LogoEvermodelText} alt="logo"/>
@@ -273,7 +294,7 @@ function WebSSH(props) {
               <Terminal id={item.id} vId={item.vId} activeId={activeId}/>
             ) : (
               <div className={styles.fileManger}>
-                <FileManager id={item.id}/>
+                <FileManager id={item.id} containerWidth={window.innerWidth - width - 24}/>
               </div>
             )
           }))}/>
@@ -284,11 +305,13 @@ function WebSSH(props) {
       <Drawer
         title={t('文件管理器')}
         placement="right"
-        width={900}
+        width={drawerWidth}
         className={styles.drawerContainer}
         open={visible}
         onClose={() => setVisible(false)}>
-        <FileManager id={hostId}/>
+        {/* 左缘拖拽手柄 */}
+        <div className={styles.drawerSplit} onMouseDown={startDrawerResize}/>
+        <FileManager id={hostId} containerWidth={drawerWidth}/>
       </Drawer>
       <Setting visible={visible2} onClose={() => setVisible2(false)}/>
     </div>
