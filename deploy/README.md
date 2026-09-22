@@ -208,7 +208,7 @@ git pull --ff-only && \
 ./deploy/supervisor/manage.sh stop all && \
 ( cd backend && . venv/bin/activate && \
   pip install -r requirements.txt --quiet && \
-  python manage.py updatedb --noinput ) && \
+  python manage.py updatedb ) && \
 ./deploy/supervisor/manage.sh start all && \
 ./deploy/supervisor/manage.sh status
 ```
@@ -228,7 +228,7 @@ git pull --ff-only
 cd backend
 . venv/bin/activate
 pip install -r requirements.txt --quiet
-python manage.py updatedb --noinput
+python manage.py updatedb
 cd ..
 
 # 4. 起后端 5 个进程
