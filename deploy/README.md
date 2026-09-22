@@ -123,21 +123,21 @@ cd /opt/evermodel_ops
 sudo ./deploy/supervisor/install.sh /opt/evermodel_ops
 ```
 
-首次运行生成 `/etc/evermodel_ops/environment`(权限 600)。**必须先编辑**它再启动服务:
+首次运行生成 `/etc/evermodel_ops/environment`(权限 600)。**默认值已可开机即用**(数据库密码
+与 `overrides.py` / `init.sh` 一致,`ALLOWED_HOSTS=*` 允许任意来源),生产环境建议改为强密码并收窄
+`ALLOWED_HOSTS`:
 
 ```bash
 sudo vim /etc/evermodel_ops/environment
 ```
 
-至少改这两行(数据库密码与 `overrides.py`/`init.sh` 一致):
-
 ```ini
-EVERMODEL_MYSQL_PASSWORD=evermodel_ops
-EVERMODEL_SECRET_KEY=CHANGE_ME_SECRET_KEY
-EVERMODEL_ALLOWED_HOSTS=127.0.0.1,你的域名或IP
+EVERMODEL_MYSQL_PASSWORD=evermodel_ops          # 与 overrides.py / init.sh 保持一致
+EVERMODEL_SECRET_KEY=CHANGE_ME_SECRET_KEY       # ⚠️ 生产改为强随机值
+EVERMODEL_ALLOWED_HOSTS=*                       # 默认 * 允许任意域名/IP;生产建议改为具体地址
 ```
 
-> `EVERMODEL_ALLOWED_HOSTS` 必须包含实际访问地址,否则浏览器登录报 **400**。
+> `ALLOWED_HOSTS` 默认 `*` 开箱即用;若改成具体域名/IP 而漏写访问地址,浏览器登录会报 **400**。
 
 改完后:
 
