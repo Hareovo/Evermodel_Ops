@@ -196,6 +196,95 @@ curl -s -o /dev/null -w 'api  %{http_code}\n' http://127.0.0.1/api/account/login
 
 ## 九、日常运维
 
+### 9.1 git 拉取新代码后的更新启停
+
+> 假设部署目录是 `/opt/evermodel_ops`，后端虚拟环境在 `backend/venv`。
+
+#### 一键版（推荐做成 alias / 脚本）
+
+```bash
+cd /opt/evermodel_ops && \
+git pull --ff-only && \
+./deploy/supervisor/manage.sh stop all && \
+( cd backend && . venv/bin/activate && \
+  pip install -r requirements.txt --quiet && \
+  python manage.py updatedb --noinput ) && \
+./deploy/supervisor/manage.sh start all && \
+./deploy/supervisor/manage.sh status
+```
+
+#### 分步版（带说明）
+
+```bash
+cd /opt/evermodel_ops
+
+# 1. 拉取最新代码（--ff-only 拒绝合并提交，避免本地脏改导致历史分叉）
+git pull --ff-only
+
+# 2. 停后端 5 个进程（不重启 systemd 主服务，只停 supervisord 管的程序）
+./deploy/supervisor/manage.sh stop all
+
+# 3. 装依赖 + 跑数据库迁移（如有）
+cd backend
+. venv/bin/activate
+pip install -r requirements.txt --quiet
+python manage.py updatedb --noinput
+cd ..
+
+# 4. 起后端 5 个进程
+./deploy/supervisor/manage.sh start all
+
+# 5. 验证
+./deploy/supervisor/manage.sh status    # 5 个全 RUNNING
+ss -lntp | grep -E ':9001|:9002'         # 两个端口在听
+curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1/    # 200
+```
+
+#### 改了前端时
+
+前端是纯静态资源，**不需要重启任何进程**：
+
+```bash
+cd /opt/evermodel_ops/frontend
+# 本地构建产物上传覆盖 build/ 即可；浏览器 Ctrl+F5 强刷
+# chunk 文件名带 hash，不会读到旧缓存
+```
+
+或服务器本地构建（不推荐，占用服务器资源）：
+
+```bash
+cd frontend && npm ci && npm run build   # 产物直接在 build/
+```
+
+#### 改了 supervisor 配置时
+
+```bash
+# 同步到 /etc/evermodel_ops/conf.d/
+sudo cp deploy/supervisor/evermodel_ops.conf /etc/evermodel_ops/conf.d/
+# reload 即可，不需要整组重启
+sudo systemctl reload evermodel_ops
+```
+
+#### 改了 docker-compose / 中间件配置时
+
+```bash
+docker compose -f deploy/docker-compose.yaml up -d   # 自动重建有变化的容器
+```
+
+#### 回滚
+
+```bash
+cd /opt/evermodel_ops
+git log --oneline -10                            # 找到上一个可用 commit
+git reset --hard <commit>
+# 然后按"分步版"重新走一遍 2~5
+```
+
+> **注意**：如果新版本包含**数据库结构变更**，回滚代码前必须先确认旧代码能否兼容新表结构。
+> 不兼容时需要先恢复数据库备份再回滚代码。
+
+### 9.2 常用命令速查
+
 ```bash
 # 统一入口
 ./deploy/run.sh status                # 中间件 + 后端状态
@@ -212,7 +301,7 @@ docker compose -f deploy/docker-compose.yaml ps
 docker compose -f deploy/docker-compose.yaml logs -f mysql
 docker compose -f deploy/docker-compose.yaml down        # 停止(不删数据)
 
-# 更新后端代码后重启整组
+# 整组重启（改了 systemd unit / 环境变量时）
 sudo systemctl restart evermodel_ops
 ```
 

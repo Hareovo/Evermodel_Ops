@@ -75,6 +75,7 @@ evermodel_ops/
 | 我想… | 看这里 |
 |---|---|
 | 从零部署到能登录 | [`deploy/README.md`](deploy/README.md) |
+| 拉新代码后的更新启停 | [`deploy/README.md`](deploy/README.md) §九 |
 | 打前端 / 后端发布包 | [`frontend/BUILD.md`](frontend/BUILD.md) · [`backend/BUILD.md`](backend/BUILD.md) |
 | 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
 | 改后端运行参数（数据库、Grafana 等） | `backend/evermodel_ops/overrides.py` |
