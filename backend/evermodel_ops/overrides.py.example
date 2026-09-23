@@ -39,7 +39,7 @@ MYSQL_HOST = os.environ.get('EVERMODEL_MYSQL_HOST', '127.0.0.1')
 MYSQL_PORT = os.environ.get('EVERMODEL_MYSQL_PORT', '3306')
 MYSQL_DB = os.environ.get('EVERMODEL_MYSQL_DB', 'evermodel_ops')
 MYSQL_USER = os.environ.get('EVERMODEL_MYSQL_USER', 'root')
-# ⚠️ 生产必须修改为强密码，并同步 deploy/init.sh 与
+# ⚠️ 生产必须修改为强密码，并同步 deploy/db/init.sh 与
 #    /etc/evermodel_ops/environment 中的 EVERMODEL_MYSQL_PASSWORD。
 MYSQL_PASSWORD = os.environ.get('EVERMODEL_MYSQL_PASSWORD', 'evermodel_ops')
 

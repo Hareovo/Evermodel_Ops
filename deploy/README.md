@@ -29,67 +29,54 @@ Docker Compose（deploy/middleware/docker-compose.yaml）
   └── evermodel-nginx  nginx         :80
 ```
 
-## 目录结构
+## 脚本一览（9 个，按资源分类）
 
 ```
 deploy/
-├── README.md                       本文件
-├── install.sh                      ★ 首次一键部署（顶层入口）
-├── update.sh                       ★ git pull 后一键更新（顶层入口）
-├── status.sh                       ★ 状态总览（顶层入口）
-├── run.sh                          兼容旧版的统一入口（薄壳，转发到新脚本）
-├── init.sh                         兼容保留（薄壳，转发到 db/init.sh）
+├── install.sh          ★ 首次一键部署
+├── update.sh           ★ git pull 后一键更新
+├── status.sh           ★ 状态总览
 │
-├── middleware/                     中间件（MariaDB / Redis / nginx）
+├── middleware.sh       中间件管理: {start|stop|status|logs} [mysql|redis|nginx]
+├── backend.sh          后端管理:   {install|build|start|stop|restart|status|logs|update} [api|ws|worker|monitor|scheduler|all]
+├── frontend.sh         前端管理:   {install|build|start|stop|update|status}
+│
+├── middleware/         中间件资产
 │   ├── docker-compose.yaml
-│   ├── start.sh / stop.sh / status.sh / logs.sh
 │   └── nginx/evermodel_ops.conf
 │
-├── backend/                        后端（1 个代码库 + 5 个进程）
-│   ├── install.sh                  首次安装：venv + 依赖 + supervisor + systemd
-│   ├── build.sh                    装/更新 Python 依赖
-│   ├── start.sh / stop.sh / restart.sh / status.sh / logs.sh
-│   ├── update.sh                   更新流程：build + 数据库对齐 + 重启
-│   └── supervisor/                 5 个进程的 supervisor 配置
-│       ├── supervisord.conf
-│       ├── evermodel_ops.conf      5 个 [program:*] 定义（含 __APP_DIR__ 占位符）
-│       ├── evermodel_ops.service   systemd 单元
-│       ├── install.sh              安装到 /etc/evermodel_ops/（被 backend/install.sh 调用）
-│       ├── manage.sh               单服务启停底层实现
-│       └── start-supervisord.sh    systemd ExecStart 包装
+├── backend/supervisor/ 5 进程 supervisor/systemd 配置（被 backend.sh install 安装）
+│   ├── supervisord.conf
+│   ├── evermodel_ops.conf        5 个 [program:*]（含 __APP_DIR__ 占位符）
+│   ├── evermodel_ops.service     systemd 单元
+│   ├── install.sh                安装到 /etc/evermodel_ops/（由 backend.sh install 调用）
+│   ├── manage.sh                 （保留）单服务底层实现
+│   └── start-supervisord.sh      systemd ExecStart 包装
 │
-├── frontend/                       前端
-│   ├── install.sh                  装 Node 依赖（npm ci）
-│   ├── build.sh                    构建（npm run build → frontend/build/）
-│   ├── start.sh                    启动（确保 nginx 在跑 + reload）
-│   ├── stop.sh                     停止（停 nginx 容器）
-│   └── update.sh                   更新流程：install + build
+├── db/
+│   ├── init.sh                   数据库幂等初始化入口
+│   ├── init.sql                  建库/授权/字符集
+│   └── init.defaults.sql         平台默认设置
 │
-├── db/                             数据库初始化（幂等）
-│   ├── init.sh                     幂等入口：updatedb + 默认设置 + admin
-│   ├── init.sql                    建库 / 授权 / 字符集（首次启动 MySQL 容器时执行）
-│   └── init.defaults.sql           平台默认设置（INSERT IGNORE / ON DUPLICATE KEY）
-│
-└── local/                          本地开发用（保留）
+└── local/                        本地开发用
 ```
 
 ## 数据库初始化策略（幂等）
 
-所有数据库变更都收敛在 `deploy/db/init.sh` 一个入口，规则：
+所有数据库变更收敛在 `deploy/db/init.sh` 一个入口，规则：
 
 - **存在就跳过，不存在就创建**
-- 每次有数据库更新（新表 / 新字段 / 新初始数据），就**往 `init.sh` 或 `backend/tools/init_instance.py` 里追加一段幂等逻辑**
-- 重复执行 `init.sh` 不会破坏现有数据 —— 它依赖 Django migrations 与业务侧的 `get_or_create`
+- 每次有数据库更新（新表 / 新字段 / 新初始数据），往 `init.sh` 或 `backend/tools/init_instance.py` 追加一段幂等逻辑
+- 重复执行不破坏现有数据（依赖 Django migrations 与 `get_or_create`）
 
 `init.sh` 当前做的事（按顺序，全部幂等）：
 
-1. 调用 `python manage.py updatedb` → 内部就是 `makemigrations + migrate`，Django 自带的 migrations 表会记录已跑过的迁移，**已执行的自动跳过**
-2. 补齐缺失的平台默认设置（`deploy/db/init.defaults.sql`，`INSERT IGNORE` / `ON DUPLICATE KEY UPDATE`）
-3. 不存在 `admin` 账号时创建超级管理员（已存在则跳过且不改密码）
+1. `python manage.py updatedb` → `makemigrations + migrate`，已执行的迁移自动跳过
+2. 补齐缺失的平台默认设置（`INSERT IGNORE` / `ON DUPLICATE KEY`）
+3. 不存在 `admin` 时创建超级管理员（已存在则跳过且不改密码）
 
-> **以后的写法**：每次发布新版本需要动数据库时，**不要单独写迁移脚本让运维去找**，
-> 直接在 `init.sh`（或它调用的 `tools/init_instance.py`）末尾追加一段幂等逻辑即可。
-> 运维拉新代码后只要跑一遍 `./deploy/update.sh` 就会把数据库对齐到最新状态。
+> **以后的写法**：发布新版本需要动数据库时，直接往 `init.sh` 末尾追加幂等逻辑，
+> 运维跑一遍 `./deploy/update.sh` 即对齐到最新状态。
 
 ---
 
@@ -120,17 +107,10 @@ cd evermodel_ops
 ## 三、首次部署（一键）
 
 ```bash
-sudo EVERMODEL_MYSQL_PASSWORD=evermodel_ops \
-     EVERMODEL_ADMIN_PASSWORD='你的管理员密码' \
-     ./deploy/install.sh
+sudo EVERMODEL_ADMIN_PASSWORD='你的管理员密码' ./deploy/install.sh
 ```
 
-`install.sh` 会按顺序执行：
-
-1. 启动中间件（MariaDB / Redis / nginx）
-2. 安装后端（venv / 依赖 / supervisor + systemd）
-3. 初始化数据库（幂等，建表 + 默认设置 + admin）
-4. 安装并构建前端
+流程：启动中间件 → 安装后端（venv/依赖/supervisor+systemd）→ 数据库幂等初始化 → 前端 install+build → 状态确认。
 
 完成后浏览器访问 `http://SERVER/`，用 `admin` + 你设置的密码登录。
 
@@ -141,83 +121,54 @@ cd /opt/evermodel_ops
 ./deploy/update.sh
 ```
 
-`update.sh` 会按顺序执行：
-
-1. `git pull --ff-only`
-2. 后端：装依赖 → 数据库对齐（幂等）→ 重启 5 个进程
-3. 前端：装依赖（如有变化）→ 构建
-4. 打印状态总览
+流程：`git pull --ff-only` → 后端（依赖 → 数据库 → 重启 5 进程）→ 前端（依赖 → 构建）→ 状态确认。
 
 浏览器 **Ctrl+F5** 强刷查看前端最新版本（chunk 文件名带 hash，不会读到旧缓存）。
 
-## 五、状态总览
+## 五、分类操作
 
 ```bash
-./deploy/status.sh
+# ---- 中间件 ----
+./deploy/middleware.sh start                    # 启动
+./deploy/middleware.sh stop                     # 停止（不删数据）
+./deploy/middleware.sh status                   # 状态
+./deploy/middleware.sh logs mysql               # 跟踪日志
+
+# ---- 后端 ----
+sudo ./deploy/backend.sh install                # 首次安装（venv + supervisor + systemd）
+./deploy/backend.sh build                       # 装/更新 Python 依赖
+./deploy/backend.sh start                       # 启动 5 个进程
+./deploy/backend.sh stop                        # 停止
+./deploy/backend.sh restart                     # 重启全部
+./deploy/backend.sh restart api                 # 重启单个（api/ws/worker/monitor/scheduler）
+./deploy/backend.sh status                      # 状态
+./deploy/backend.sh logs api                    # 跟踪 api 日志
+./deploy/backend.sh update                      # 更新: build + 数据库 + 重启
+
+# ---- 前端 ----
+./deploy/frontend.sh install                    # 装/同步 Node 依赖
+./deploy/frontend.sh build                      # 构建 → frontend/build/
+./deploy/frontend.sh start                      # 确保中间件在跑 + reload nginx
+./deploy/frontend.sh stop                       # 停 nginx（API 反代一并断）
+./deploy/frontend.sh update                     # install + build
+
+# ---- 数据库 ----
+EVERMODEL_MYSQL_PASSWORD=evermodel_ops ./deploy/db/init.sh     # 幂等，可重复执行
 ```
 
-输出中间件状态、后端 5 进程状态、端口监听、前端可达性。
-
-## 六、分类操作
-
-### 中间件（MariaDB / Redis / nginx）
-
-```bash
-./deploy/middleware/start.sh     # 启动
-./deploy/middleware/stop.sh      # 停止（不删数据）
-./deploy/middleware/status.sh    # 状态
-./deploy/middleware/logs.sh      # 跟踪日志（可跟服务名：mysql / redis / nginx）
-```
-
-### 后端（5 个进程）
-
-```bash
-./deploy/backend/install.sh              # 首次安装（venv + supervisor + systemd）
-./deploy/backend/build.sh                # 装/更新 Python 依赖
-./deploy/backend/start.sh                # 启动 5 个进程
-./deploy/backend/stop.sh                 # 停止 5 个进程
-./deploy/backend/restart.sh              # 重启 5 个进程
-./deploy/backend/restart.sh api          # 重启单个进程（api/ws/worker/monitor/scheduler）
-./deploy/backend/status.sh               # 状态
-./deploy/backend/logs.sh api             # 跟踪 api 日志
-./deploy/backend/update.sh               # 更新流程：build + 数据库对齐 + 重启
-```
-
-### 前端
-
-```bash
-./deploy/frontend/install.sh     # 装 Node 依赖（npm ci）
-./deploy/frontend/build.sh       # 构建（npm run build → frontend/build/）
-./deploy/frontend/start.sh       # 启动（确保 nginx 在跑 + reload）
-./deploy/frontend/stop.sh        # 停止（停 nginx 容器）
-./deploy/frontend/update.sh      # 更新流程：install + build
-```
-
-### 数据库
-
-```bash
-# 幂等：可重复执行
-EVERMODEL_MYSQL_PASSWORD=evermodel_ops ./deploy/db/init.sh
-
-# 首次部署时需要 admin 密码：
-EVERMODEL_MYSQL_PASSWORD=evermodel_ops \
-EVERMODEL_ADMIN_PASSWORD='你的密码' \
-  ./deploy/db/init.sh
-```
-
-## 七、回滚
+## 六、回滚
 
 ```bash
 cd /opt/evermodel_ops
-git log --oneline -10                            # 找到上一个可用 commit
+git log --oneline -10                # 找到上一个可用 commit
 git reset --hard <commit>
-./deploy/update.sh                               # 重新走一遍更新流程
+./deploy/update.sh
 ```
 
-> **注意**：如果新版本包含**数据库结构变更**，回滚代码前必须先确认旧代码能否兼容新表结构。
-> 不兼容时需要先恢复数据库备份再回滚代码。
+> 若新版本包含**数据库结构变更**，回滚前先确认旧代码兼容新表结构；
+> 不兼容时先恢复数据库备份再回滚代码。
 
-## 八、数据库备份 / 改密
+## 七、数据库备份 / 改密
 
 ```bash
 # 备份
@@ -228,31 +179,30 @@ docker exec evermodel-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD
 cd backend && . venv/bin/activate
 python manage.py user reset -u admin -p '新强密码'
 
-# 数据库密码（改后同步 overrides.py / environment，再重启后端）
+# 数据库密码（改后同步 overrides.py 与 /etc/evermodel_ops/environment，再重启后端）
 docker exec -it evermodel-mysql mysql -uroot -p -e \
   "ALTER USER 'root'@'%' IDENTIFIED BY '新强密码'; FLUSH PRIVILEGES;"
 ```
 
 > 平台有防爆破：同一账号连续 3 次密码错误会被禁用。启用：`python manage.py user enable -u admin`。
 
-## 九、常见问题
+## 八、常见问题
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
-| 页面 502 | gunicorn / daphne 没起 | `./deploy/backend/status.sh`；看 `backend/logs/api.log` |
-| 5 个进程全 `FATAL` / `spawn error` | `backend/logs/` 不存在 | `sudo mkdir -p /opt/evermodel_ops/backend/logs && ./deploy/backend/restart.sh` |
-| 页面 404 / 空白 | 前端产物没构建 | `./deploy/frontend/build.sh` |
-| 接口 400 DisallowedHost | `ALLOWED_HOSTS` 没配 / Host 未透传 | 改 `backend/evermodel_ops/overrides.py`；确认 nginx 有 `proxy_set_header Host $host` |
-| 接口 401，但用登录接口探又是 200 | 探了需要鉴权的接口 | `/account/login/` 在免鉴权白名单里，探活用它 |
+| 页面 502 | gunicorn / daphne 没起 | `./deploy/backend.sh status`；看 `backend/logs/api.log` |
+| 5 个进程全 `FATAL` / `spawn error` | `backend/logs/` 不存在 | `sudo mkdir -p backend/logs && ./deploy/backend.sh restart` |
+| 页面 404 / 空白 | 前端产物没构建 | `./deploy/frontend.sh build` |
+| 接口 400 DisallowedHost | `ALLOWED_HOSTS` 没配 | 改 `backend/evermodel_ops/overrides.py` 后 `./deploy/backend.sh restart` |
 | pip 装 mysqlclient 报 `mysql.h: No such file` | 缺编译依赖 | 装 `python3-dev gcc pkg-config default-libmysqlclient-dev libssl-dev` |
-| 数据库连不上 | 容器没起 / 密码不一致 | `./deploy/middleware/status.sh`；核对 supervisor 环境变量与 `overrides.py` |
+| 数据库连不上 | 容器没起 / 密码不一致 | `./deploy/middleware.sh status`；核对 `/etc/evermodel_ops/environment` |
 | Web 终端连上几秒断开 | redis-py 8 默认 socket 超时 | 配置里的 `REDIS_POOL_KWARGS socket_timeout: None` 不要删（已内置） |
-| 批量执行卡 `### Waiting for scheduling ...` | worker 没起 | `./deploy/backend/restart.sh worker`，任务需重新提交 |
+| 批量执行卡 `### Waiting for scheduling ...` | worker 没起 | `./deploy/backend.sh restart worker`，任务需重新提交 |
 | 监控不执行 / 不告警 | monitor / scheduler 没起 | 同上；`redis-cli -n 1 llen evermodel_ops:monitor` 非 0 即征兆 |
 
-## 十、备用：手工初始化
+## 九、备用：手工初始化
 
-`deploy/db/init.sh` 不可用时，可按序手工执行：
+`deploy/db/init.sh` 不可用时，按序手工执行：
 
 ```bash
 # 1 建库与账号（compose 已自动建库时跳过）
@@ -266,6 +216,6 @@ python manage.py updatedb
 python manage.py user add -u admin -p evermodel_ops -n 管理员 -s
 
 # 4 平台默认设置（settings 表存在后执行）
-cd /opt/evermodel_ops
-docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops evermodel_ops < deploy/db/init.defaults.sql
+docker exec -i evermodel-mysql mysql -uroot -pevermodel_ops evermodel_ops \
+  < deploy/db/init.defaults.sql
 ```

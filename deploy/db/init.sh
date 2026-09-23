@@ -16,7 +16,7 @@ BACKEND_DIR="$ROOT_DIR/backend"
 PYTHON="$BACKEND_DIR/venv/bin/python"
 
 if [ ! -x "$PYTHON" ]; then
-  echo "Missing backend/venv. Run deploy/backend/install.sh first." >&2
+  echo "Missing backend/venv. Run: sudo deploy/backend.sh install" >&2
   exit 1
 fi
 if [ -z "${EVERMODEL_MYSQL_PASSWORD:-}" ]; then

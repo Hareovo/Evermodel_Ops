@@ -9,13 +9,13 @@ DEPLOY_DIR=$(cd "$(dirname "$0")" && pwd)
 echo "==============================================="
 echo "  中间件（Docker）"
 echo "==============================================="
-bash "$DEPLOY_DIR/middleware/status.sh" || true
+bash "$DEPLOY_DIR/middleware.sh" status || true
 
 echo
 echo "==============================================="
 echo "  后端 5 个进程（supervisor）"
 echo "==============================================="
-bash "$DEPLOY_DIR/backend/status.sh" || true
+supervisorctl -c /etc/evermodel_ops/supervisord.conf status || true
 
 echo
 echo "==============================================="
