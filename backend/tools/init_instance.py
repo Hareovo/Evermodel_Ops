@@ -12,7 +12,8 @@ from django.core.management import call_command
 def main():
     parser = argparse.ArgumentParser(description='Initialize an Evermodel Ops instance')
     parser.add_argument('--admin-user', default='admin')
-    parser.add_argument('--admin-password', required=True)
+    # 密码可选：admin 已存在时不需要；admin 不存在时必须提供，否则无法创建
+    parser.add_argument('--admin-password', default=None)
     parser.add_argument('--admin-name', default='Administrator')
     args = parser.parse_args()
 
@@ -34,6 +35,11 @@ def main():
     if user:
         print(f'Administrator {args.admin_user!r} already exists; password unchanged')
     else:
+        if not args.admin_password:
+            raise RuntimeError(
+                f'Administrator {args.admin_user!r} does not exist; '
+                '--admin-password is required to create one'
+            )
         User.objects.create(
             username=args.admin_user,
             password_hash=User.make_password(args.admin_password),

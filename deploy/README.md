@@ -1,22 +1,51 @@
 # 部署(deploy/)
 
-Evermodel Ops 的完整部署入口:中间件(MariaDB / Redis / nginx)由 Docker Compose 提供,后端 5 个进程由 supervisor + systemd 托管(宿主机 venv 运行),前端由 nginx 容器挂载 `frontend/build`。
+Evermodel Ops 的完整部署入口。
+
+## 部署形态：1 + 1 + 5
+
+- **1 个前端**：React 静态产物，由 nginx 容器挂载 `frontend/build` 直接伺服
+- **1 个后端代码库**：Django 工程，宿主机 `backend/venv` 内运行
+- **5 个后端服务进程**：由 supervisor + systemd 托管，共用同一份代码与虚拟环境
 
 ```
 浏览器 ── :80 ── nginx 容器 (evermodel-nginx)
-                     ├── /        → frontend/build(前端静态产物)
-                     ├── /api/    → 宿主机 gunicorn :9001(REST API)
-                     └── /api/ws/ → 宿主机 daphne   :9002(WebSocket)
+                     ├── /        → frontend/build        （前端静态产物）
+                     ├── /api/    → 宿主机 gunicorn :9001 （REST API）
+                     └── /api/ws/ → 宿主机 daphne   :9002 （WebSocket）
 
 宿主机
-  ├── backend/venv  → 5 个后端进程(supervisor + systemd 托管)
-  └── deploy/data/  → MySQL / Redis 数据(项目内目录,.gitignore 已排除)
+  ├── backend/venv  → 5 个后端进程（supervisor + systemd 托管）
+  │     ├── evermodel_ops-api        gunicorn :9001   REST API
+  │     ├── evermodel_ops-ws         daphne   :9002   WebSocket
+  │     ├── evermodel_ops-worker     批量执行 / 任务计划 / 监控的执行器
+  │     ├── evermodel_ops-monitor    监控检测
+  │     └── evermodel_ops-scheduler  任务计划调度
+  └── deploy/data/  → MySQL / Redis 数据（项目内目录，.gitignore 已排除）
 
 Docker Compose (deploy/docker-compose.yaml)
   ├── evermodel-mysql  MariaDB 10.8  127.0.0.1:3306
   ├── evermodel-redis  Redis 7       127.0.0.1:6379
   └── evermodel-nginx  nginx         :80
 ```
+
+## 数据库初始化策略（幂等）
+
+所有数据库变更都收敛在 `deploy/init.sh` 一个入口，规则：
+
+- **存在就跳过，不存在就创建**
+- 每次有数据库更新（新表 / 新字段 / 新初始数据），就**往 `init.sh` 里追加一段幂等逻辑**
+- 重复执行 `init.sh` 不会破坏现有数据 —— 它依赖 Django migrations 与业务侧的 `get_or_create`
+
+`init.sh` 当前做的事（按顺序，全部幂等）：
+
+1. 调用 `python manage.py updatedb` → 内部就是 `makemigrations + migrate`，Django 自带的 migrations 表会记录已跑过的迁移，**已执行的自动跳过**
+2. 补齐缺失的平台默认设置（`deploy/db/init.defaults.sql`，`INSERT ... ON DUPLICATE KEY UPDATE` 或 `INSERT IGNORE`）
+3. 不存在 `admin` 账号时创建超级管理员
+
+> **以后的写法**：每次发布新版本需要动数据库时，**不要单独写迁移脚本让运维去找**，
+> 直接在 `init.sh`（或它调用的 `tools/init_instance.py`）末尾追加一段幂等逻辑即可。
+> 运维拉新代码后只要跑一遍 `./deploy/init.sh` 就能把数据库对齐到最新状态。
 
 ## 目录结构
 
@@ -207,8 +236,8 @@ cd /opt/evermodel_ops && \
 git pull --ff-only && \
 ./deploy/supervisor/manage.sh stop all && \
 ( cd backend && . venv/bin/activate && \
-  pip install -r requirements.txt --quiet && \
-  python manage.py updatedb ) && \
+  pip install -r requirements.txt --quiet ) && \
+EVERMODEL_MYSQL_PASSWORD=evermodel_ops ./deploy/init.sh && \
 ./deploy/supervisor/manage.sh start all && \
 ./deploy/supervisor/manage.sh status
 ```
@@ -224,12 +253,13 @@ git pull --ff-only
 # 2. 停后端 5 个进程（不重启 systemd 主服务，只停 supervisord 管的程序）
 ./deploy/supervisor/manage.sh stop all
 
-# 3. 装依赖 + 跑数据库迁移（如有）
+# 3. 装依赖 + 数据库对齐（幂等，含表结构迁移与初始数据补齐）
 cd backend
 . venv/bin/activate
 pip install -r requirements.txt --quiet
-python manage.py updatedb
 cd ..
+EVERMODEL_MYSQL_PASSWORD=evermodel_ops ./deploy/init.sh
+# 说明：admin 已存在时 init.sh 不需要 EVERMODEL_ADMIN_PASSWORD
 
 # 4. 起后端 5 个进程
 ./deploy/supervisor/manage.sh start all
