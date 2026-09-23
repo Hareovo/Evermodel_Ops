@@ -62,7 +62,7 @@ ASGI_APPLICATION = 'evermodel_ops.asgi.application'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Database
-# 默认连接 MySQL（与 deploy/docker-compose.yaml 一致）。仅本地调试需要 SQLite 时，
+# 默认连接 MySQL（与 deploy/middleware/docker-compose.yaml 一致）。仅本地调试需要 SQLite 时，
 # 设置 EVERMODEL_USE_SQLITE=1，并通过 EVERMODEL_MYSQL_* 指定连接信息。
 if os.environ.get('EVERMODEL_USE_SQLITE') == '1':
     DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}

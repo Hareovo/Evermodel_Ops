@@ -12,7 +12,7 @@ Python 3 + Django 4.2 + Django Channels（WebSocket）+ MySQL + Redis。
 | Java 生态 | 本项目对应物 |
 |---|---|
 | `mvn package` → `target/app.jar` | `python tools/build_release.py` → `dist/evermodel_ops-v4.0.1.tar.gz` |
-| `java -jar app.jar` | supervisor 起 5 个进程（`deploy/supervisor/`） |
+| `java -jar app.jar` | supervisor 起 5 个进程（`deploy/backend/supervisor/`） |
 | `application.yml` / 环境变量 | `evermodel_ops/overrides.py` + `EVERMODEL_*` 环境变量 |
 | Flyway / Liquibase 迁移 | `python manage.py updatedb`（Django migrate） |
 
@@ -146,10 +146,10 @@ python manage.py user add -u admin -p evermodel_ops -n 管理员 -s
 APP_DIR=/data/evermodel_ops
 sudo apt install -y supervisor
 sudo mkdir -p "$APP_DIR/backend/logs" /etc/evermodel_ops/conf.d /var/log/evermodel_ops
-sudo install -m 0644 "$APP_DIR/deploy/supervisor/supervisord.conf" /etc/evermodel_ops/supervisord.conf
-sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.conf" \
+sudo install -m 0644 "$APP_DIR/deploy/backend/supervisor/supervisord.conf" /etc/evermodel_ops/supervisord.conf
+sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/backend/supervisor/evermodel_ops.conf" \
   | sudo tee /etc/evermodel_ops/conf.d/evermodel_ops.conf > /dev/null
-sudo install -m 0644 "$APP_DIR/deploy/supervisor/evermodel_ops.service" \
+sudo install -m 0644 "$APP_DIR/deploy/backend/supervisor/evermodel_ops.service" \
   /etc/systemd/system/evermodel_ops.service
 sudo systemctl daemon-reload && sudo systemctl enable --now evermodel_ops
 ```

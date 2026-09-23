@@ -12,7 +12,7 @@
 -- 本目录只有 SQL、没有脚本：初始化按 README.md 第一节的四步手工执行
 -- （① 建库 → ② 建表 → ③ 建管理员 → ④ 写默认设置）。
 --
--- ⚠️ 用 `deploy/docker-compose.yaml` 启动 MariaDB 时，镜像的 entrypoint 在**首次初始化
+-- ⚠️ 用 `deploy/middleware/docker-compose.yaml` 启动 MariaDB 时，镜像的 entrypoint 在**首次初始化
 --    数据卷**时就会按 MYSQL_DATABASE / MYSQL_ROOT_PASSWORD / MYSQL_ROOT_HOST 自动把库和
 --    root@'%' 建好，那种场景下本文件是多余的（重复执行无害）。
 --    它主要服务于：已有实例、手工安装、重置数据卷后重建。

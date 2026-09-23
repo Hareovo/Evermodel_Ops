@@ -37,28 +37,35 @@
 
 ```bash
 # 1. 启动 MariaDB / Redis / nginx（数据存于 deploy/data/）
-docker compose -f deploy/docker-compose.yaml up -d
+./deploy/middleware/start.sh
 
-# 2. 准备后端运行环境
-cd backend
-python3 -m venv venv && . venv/bin/activate
-pip install -r requirements.txt
-cp evermodel_ops/overrides.py.example evermodel_ops/overrides.py
+# 2. 安装后端（venv / 依赖 / supervisor + systemd / 5 个进程）
+sudo ./deploy/backend/install.sh /opt/evermodel_ops
 
-# 3. 初始化数据库与管理员
-cd ..
+# 3. 初始化数据库与管理员（幂等）
 export EVERMODEL_MYSQL_PASSWORD=evermodel_ops
 export EVERMODEL_ADMIN_PASSWORD='你的管理员密码'
-./deploy/init.sh
+./deploy/db/init.sh
 
-# 4. 一键托管后端 5 个进程（supervisor + systemd）
-sudo ./deploy/supervisor/install.sh /opt/evermodel_ops
+# 4. 安装并构建前端
+./deploy/frontend/install.sh
+./deploy/frontend/build.sh
+```
 
-# 5. 部署前端（开发机执行，产物上传解压到 frontend/build/）
-cd frontend && npm run dist
+或者用顶层一键脚本（推荐）：
+
+```bash
+sudo EVERMODEL_ADMIN_PASSWORD='你的管理员密码' ./deploy/install.sh
 ```
 
 浏览器访问 `http://SERVER/`，用 `admin` + 步骤 3 设置的密码登录。
+
+## 日常更新
+
+```bash
+cd /opt/evermodel_ops
+./deploy/update.sh    # git pull + 后端（装依赖/迁移/重启）+ 前端（install/build）
+```
 
 ## 目录结构
 
@@ -75,11 +82,12 @@ evermodel_ops/
 | 我想… | 看这里 |
 |---|---|
 | 从零部署到能登录 | [`deploy/README.md`](deploy/README.md) |
-| 拉新代码后的更新启停 | [`deploy/README.md`](deploy/README.md) §九 |
-| 打前端 / 后端发布包 | [`frontend/BUILD.md`](frontend/BUILD.md) · [`backend/BUILD.md`](backend/BUILD.md) |
-| 改 nginx 反代规则 | [`deploy/nginx/evermodel_ops.conf`](deploy/nginx/evermodel_ops.conf) |
+| 拉新代码后的更新启停 | `./deploy/update.sh`（或 [`deploy/README.md`](deploy/README.md) §四） |
+| 状态总览 | `./deploy/status.sh` |
+| 改 nginx 反代规则 | [`deploy/middleware/nginx/evermodel_ops.conf`](deploy/middleware/nginx/evermodel_ops.conf) |
 | 改后端运行参数（数据库、Grafana 等） | `backend/evermodel_ops/overrides.py` |
-| 改进程托管配置 | `deploy/supervisor/` |
+| 改进程托管配置 | `deploy/backend/supervisor/` |
+| 改中间件配置 | `deploy/middleware/docker-compose.yaml` |
 
 ## 许可
 

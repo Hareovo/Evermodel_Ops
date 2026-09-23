@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR=${1:-$(cd "$(dirname "$0")/../.." && pwd)}
+APP_DIR=${1:-$(cd "$(dirname "$0")/../../.." && pwd)}
 CONF_DIR=/etc/evermodel_ops
 SUPERVISOR_CONF="$CONF_DIR/supervisord.conf"
 PROGRAM_CONF="$CONF_DIR/conf.d/evermodel_ops.conf"
@@ -14,9 +14,9 @@ fi
 [ -x "$APP_DIR/backend/venv/bin/python" ] || { echo "Missing backend/venv" >&2; exit 1; }
 
 mkdir -p "$APP_DIR/backend/logs" "$CONF_DIR/conf.d" /var/log/evermodel_ops
-install -m 0644 "$APP_DIR/deploy/supervisor/supervisord.conf" "$SUPERVISOR_CONF"
-sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.conf" > "$PROGRAM_CONF"
-sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/supervisor/evermodel_ops.service" \
+install -m 0644 "$APP_DIR/deploy/backend/supervisor/supervisord.conf" "$SUPERVISOR_CONF"
+sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/backend/supervisor/evermodel_ops.conf" > "$PROGRAM_CONF"
+sed "s|__APP_DIR__|$APP_DIR|g" "$APP_DIR/deploy/backend/supervisor/evermodel_ops.service" \
   > /etc/systemd/system/evermodel_ops.service
 
 if [ ! -f "$ENV_FILE" ]; then

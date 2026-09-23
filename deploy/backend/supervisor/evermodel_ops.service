@@ -30,7 +30,7 @@ Wants=docker.service
 Type=simple
 ; supervisord 以前台方式运行（-n），进程生命周期完全交给 systemd 跟踪。
 ; 配置文件里 nodaemon = true 与这里的 -n 是对应的，不能改成后台模式。
-ExecStart=/usr/bin/bash __APP_DIR__/deploy/supervisor/start-supervisord.sh
+ExecStart=/usr/bin/bash __APP_DIR__/deploy/backend/supervisor/start-supervisord.sh
 ; reload = 重新读取 conf.d 下的程序配置并按需增删进程（改完 ini 后 systemctl reload 即可）
 ExecReload=/bin/sh -c '/usr/bin/supervisorctl -c /etc/evermodel_ops/supervisord.conf reread && exec /usr/bin/supervisorctl -c /etc/evermodel_ops/supervisord.conf update'
 ExecStop=/usr/bin/supervisorctl -c /etc/evermodel_ops/supervisord.conf shutdown

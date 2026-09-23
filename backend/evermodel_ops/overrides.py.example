@@ -32,7 +32,7 @@ SECRET_KEY = os.environ.get(
 )
 
 # ------------------------------------------------------------
-# 数据层(Docker Compose，见 deploy/docker-compose.yaml)
+# 数据层(Docker Compose，见 deploy/middleware/docker-compose.yaml)
 # 后端运行在宿主机，通过 127.0.0.1 访问容器映射端口。
 # ------------------------------------------------------------
 MYSQL_HOST = os.environ.get('EVERMODEL_MYSQL_HOST', '127.0.0.1')
